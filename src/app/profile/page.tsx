@@ -39,7 +39,9 @@ const ProfilePage = () => {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [profileImage, setProfileImage] = useState<string | null>("https://picsum.photos/id/237/200/300");
+    const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
+  const [newProfileImage, setNewProfileImage] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     defaultValues: {
@@ -67,11 +69,22 @@ const ProfilePage = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setProfileImage(reader.result as string);
+          setNewProfileImage(reader.result as string);
+        setIsImageDialogOpen(true);
+
       };
       reader.readAsDataURL(file);
     }
   };
+
+    const handleChangeProfilePicture = () => {
+        setProfileImage(newProfileImage);
+        setIsImageDialogOpen(false);
+        toast({
+            title: "Success!",
+            description: "Profile picture updated successfully.",
+        });
+    };
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-background">
@@ -205,6 +218,32 @@ const ProfilePage = () => {
           </CardDescription>
         </CardContent>
       </Card>
+        <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>Change Profile Picture</DialogTitle>
+                    <DialogDescription>
+                        Do you want to change your profile picture?
+                    </DialogDescription>
+                </DialogHeader>
+                {newProfileImage && (
+                    <div className="flex justify-center items-center mb-4">
+                        <Avatar className="h-24 w-24">
+                            <AvatarImage src={newProfileImage} alt="New Profile" />
+                            <AvatarFallback>NP</AvatarFallback>
+                        </Avatar>
+                    </div>
+                )}
+                <DialogFooter>
+                    <Button type="button" variant="secondary" onClick={() => setIsImageDialogOpen(false)}>
+                        Cancel
+                    </Button>
+                    <Button type="button" onClick={handleChangeProfilePicture}>
+                        Change Profile Picture
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   )
 }
