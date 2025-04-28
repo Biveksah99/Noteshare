@@ -21,12 +21,15 @@ import {useRouter} from "next/navigation"
 import {useState} from "react"
 import {useForm} from "react-hook-form"
 import * as z from "zod"
-import {Edit} from "lucide-react";
+import {Edit, Check} from "lucide-react";
+import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger} from "@/components/ui/dialog";
 
 const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
+  fullName: z.string().min(2, {
+    message: "Full Name must be at least 2 characters.",
   }),
+  section: z.string().optional(),
+  contactNumber: z.string().optional(),
   bio: z.string().min(10, {
     message: "Bio must be at least 10 characters.",
   }),
@@ -35,10 +38,13 @@ const formSchema = z.object({
 const ProfilePage = () => {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const [open, setOpen] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
     defaultValues: {
-      name: "John Doe",
+      fullName: "John Doe",
+      section: "A",
+      contactNumber: "123-456-7890",
       bio: "Passionate about sharing knowledge and helping others learn.",
     },
   })
@@ -52,7 +58,7 @@ const ProfilePage = () => {
       title: "Success!",
       description: "Profile updated successfully.",
     })
-    router.push("/")
+    setOpen(false); // Close the dialog after submitting
   }
 
   return (
@@ -63,9 +69,98 @@ const ProfilePage = () => {
             <CardTitle className="text-2xl font-semibold">Your Profile</CardTitle>
             <CardDescription>Manage your profile information.</CardDescription>
           </div>
-          <Button variant="ghost" size="icon">
-            <Edit className="h-5 w-5"/>
-          </Button>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Edit className="h-5 w-5"/>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Edit Profile</DialogTitle>
+                <DialogDescription>
+                  Make changes to your profile here. Click save when you're done.
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="fullName"
+                    render={({field}) => (
+                      <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your Full Name" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          This is how your name will appear on shared notes.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="section"
+                    render={({field}) => (
+                      <FormItem>
+                        <FormLabel>Section</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your Section (e.g., A, B)" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Specify your class section.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="contactNumber"
+                    render={({field}) => (
+                      <FormItem>
+                        <FormLabel>Contact Number</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your Contact Number" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Enter your contact number.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="bio"
+                    render={({field}) => (
+                      <FormItem>
+                        <FormLabel>Bio</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Write a short bio about yourself."
+                            className="resize-none"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Briefly describe yourself and your interests.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter>
+                    <Button type="submit" className={cn("ml-auto bg-accent text-accent-foreground", isLoading && "cursor-not-allowed opacity-50")} disabled={isLoading}>
+                      {isLoading ? "Updating..." : "Update Profile"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </CardHeader>
         <CardContent>
           <div className="flex items-center space-x-4 mb-4">
@@ -74,56 +169,15 @@ const ProfilePage = () => {
               <AvatarFallback>JD</AvatarFallback>
             </Avatar>
             <div>
-              <div className="text-lg font-semibold">John Doe</div>
-              <div className="text-sm text-muted-foreground">john.doe@example.com</div>
+              <div className="text-lg font-semibold">{form.getValues("fullName")}</div>
+              <div className="text-sm text-muted-foreground">{form.getValues("contactNumber")}</div>
+              <div className="text-sm text-muted-foreground">{form.getValues("section")}</div>
             </div>
           </div>
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({field}) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Your Name" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      This is how your name will appear on shared notes.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="bio"
-                render={({field}) => (
-                  <FormItem>
-                    <FormLabel>Bio</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Write a short bio about yourself."
-                        className="resize-none"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Briefly describe yourself and your interests.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <CardFooter>
-                <Button type="submit" className={cn("ml-auto bg-accent text-accent-foreground", isLoading && "cursor-not-allowed opacity-50")} disabled={isLoading}>
-                  {isLoading ? "Updating..." : "Update Profile"}
-                </Button>
-              </CardFooter>
-            </form>
-          </Form>
+          <CardDescription>
+            {form.getValues("bio")}
+          </CardDescription>
         </CardContent>
       </Card>
     </div>
