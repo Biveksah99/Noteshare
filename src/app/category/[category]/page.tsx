@@ -31,52 +31,53 @@ const CategoryDetailPage = () => {
     }
   }, [category]);
 
-  const renderFile = (note: any) => {
-    if (note.file) {
-      const fileURL = note.file;
-      const fileType = note.type || '';
+  const renderFiles = (files: any[]) => {
+    return files.map((file, index) => {
+      if (file && file.url) {
+        const fileURL = file.url;
+        const fileType = file.type || '';
 
-      if (fileType.startsWith('image/')) {
-        return (
-          <div className="flex justify-center">
-            <Link href={`/view-note?id=${note.id}&category=${category}`}>
-              <img
+        if (fileType.startsWith('image/')) {
+          return (
+            <div key={index} className="flex justify-center mb-2">
+              <Link href={`/view-note?id=${note.id}&category=${category}&fileIndex=${index}`}>
+                <img
+                  src={fileURL}
+                  alt={`File ${index + 1}`}
+                  className="max-w-full h-auto rounded-md shadow-md cursor-pointer"
+                />
+              </Link>
+            </div>
+          );
+        } else if (fileType === 'application/pdf') {
+          return (
+            <div key={index} className="flex justify-center mb-2">
+              <embed
                 src={fileURL}
-                alt={note.title}
-                className="max-w-full h-auto rounded-md shadow-md cursor-pointer"
+                type="application/pdf"
+                className="w-full h-[500px] rounded-md shadow-md"
               />
-            </Link>
-          </div>
-        );
-      } else if (fileType === 'application/pdf') {
-        return (
-          <div className="flex justify-center">
-            <embed
-              src={fileURL}
-              type="application/pdf"
-              className="w-full h-[500px] rounded-md shadow-md"
-            />
-          </div>
-        );
-      } else {
-        return (
-          <div className="flex justify-center">
-            <a
-              href={fileURL}
-              download={note.title}
-              className="underline text-blue-500"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Download File
-            </a>
-          </div>
-        );
+            </div>
+          );
+        } else {
+          return (
+            <div key={index} className="flex justify-center mb-2">
+              <a
+                href={fileURL}
+                download={`file-${index + 1}`}
+                className="underline text-blue-500"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Download File {index + 1}
+              </a>
+            </div>
+          );
+        }
       }
-    }
-    return null;
+      return null;
+    });
   };
-
 
   return (
     <div className="container mx-auto p-6">
@@ -100,7 +101,7 @@ const CategoryDetailPage = () => {
               </CardHeader>
               <CardContent>
                 <CardDescription className="mb-4">{note.description}</CardDescription>
-                {renderFile(note)}
+                {note.files && renderFiles(note.files)}
               </CardContent>
             </Card>
           </div>

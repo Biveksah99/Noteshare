@@ -24,8 +24,10 @@ const formSchema = z.object({
   description: z.string().min(10, {
     message: "Description must be at least 10 characters.",
   }),
-  file: z.any()
+  files: z.array(z.any()).min(1, {message: "Please upload at least one file."})
 })
+
+type FormValues = z.infer<typeof formSchema>;
 
 const UploadPage = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -40,27 +42,27 @@ const UploadPage = () => {
     }
   }, []);
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     defaultValues: {
       category: "",
       title: "",
       description: "",
+      files: []
     },
   })
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: FormValues) {
     setIsLoading(true);
 
-    // Convert file to data URL
-    const file = values.file;
-    let fileDataUrl = null;
-    if (file) {
-      fileDataUrl = await new Promise((resolve, reject) => {
+    const fileDataUrls = [];
+    for (const file of values.files) {
+      const fileDataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
+      fileDataUrls.push({ url: fileDataUrl, type: file.type });
     }
 
     const newNote = {
@@ -69,8 +71,7 @@ const UploadPage = () => {
       description: values.description,
       uploader: 'CurrentUser', // Replace with actual user info
       timestamp: new Date().toISOString(),
-      file: fileDataUrl, // Store the data URL
-      type: file?.type, // Store the MIME type
+      files: fileDataUrls,
     };
 
     // Load existing notes for the category or initialize an empty array
@@ -94,7 +95,7 @@ const UploadPage = () => {
   }
 
   return (
-    <div className="flex justify-center items-center h-screen bg-background">
+    <div className="flex justify-center items-center min-h-screen bg-background">
       <Card className="w-[500px] bg-card text-card-foreground shadow-lg">
         <CardHeader>
           <CardTitle className="text-2xl font-semibold">Upload Study Material</CardTitle>
@@ -166,15 +167,16 @@ const UploadPage = () => {
               />
               <FormField
                 control={form.control}
-                name="file"
+                name="files"
                 render={({field}) => (
                   <FormItem>
-                    <FormLabel>Upload File</FormLabel>
+                    <FormLabel>Upload Files</FormLabel>
                     <FormControl>
                       <Input
                         type="file"
+                        multiple
                         onChange={(e) => {
-                          field.onChange(e.target.files?.[0])
+                          field.onChange(Array.from(e.target.files || []));
                         }}
                       />
                     </FormControl>

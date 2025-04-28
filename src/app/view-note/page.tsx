@@ -12,35 +12,37 @@ const ViewNotePage = () => {
   const router = useRouter();
   const noteId = searchParams.get('id');
   const category = searchParams.get('category');
+  const fileIndex = searchParams.get('fileIndex');
   const [note, setNote] = useState<any>(null);
+  const [fileURL, setFileURL] = useState<string | null>(null);
+  const [fileType, setFileType] = useState<string | null>(null);
 
   useEffect(() => {
-    if (category && noteId) {
+    if (category && noteId && fileIndex !== null) {
       const storedNotes = localStorage.getItem(category);
       if (storedNotes) {
         try {
           const notes = JSON.parse(storedNotes);
           const foundNote = notes.find((n: any) => n.id === parseInt(noteId));
-          if (foundNote) {
+          if (foundNote && foundNote.files && foundNote.files[fileIndex]) {
             setNote(foundNote);
+            setFileURL(foundNote.files[fileIndex].url);
+            setFileType(foundNote.files[fileIndex].type);
           } else {
-            // If note not found, redirect back to category page
             router.push(`/category/${category}`);
           }
         } catch (error) {
           console.error("Error parsing stored notes:", error);
         }
       } else {
-        // If no notes in category, redirect back to category page
         router.push(`/category/${category}`);
       }
     } else {
-      // If missing params, redirect to home page
       router.push('/');
     }
-  }, [category, noteId, router]);
+  }, [category, noteId, fileIndex, router]);
 
-  if (!note) {
+  if (!note || !fileURL || !fileType) {
     return <div>Loading...</div>;
   }
 
@@ -61,22 +63,35 @@ const ViewNotePage = () => {
         </CardHeader>
         <CardContent>
           <CardDescription className="mb-4">{note.description}</CardDescription>
-          {note.file && note.type && note.type.startsWith('image/') && (
+          {fileURL && fileType && fileType.startsWith('image/') && (
             <div className="flex justify-center">
               <img
-                src={note.file}
+                src={fileURL}
                 alt={note.title}
                 className="max-w-full h-auto rounded-md shadow-md"
               />
             </div>
           )}
-          {note.file && note.type && note.type === 'application/pdf' && (
+          {fileURL && fileType && fileType === 'application/pdf' && (
             <div className="flex justify-center">
               <embed
-                src={note.file}
+                src={fileURL}
                 type="application/pdf"
                 className="w-full h-[500px] rounded-md shadow-md"
               />
+            </div>
+          )}
+          {fileURL && fileType && !fileType.startsWith('image/') && fileType !== 'application/pdf' && (
+            <div className="flex justify-center">
+              <a
+                href={fileURL}
+                download={note.title}
+                className="underline text-blue-500"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Download File
+              </a>
             </div>
           )}
         </CardContent>
