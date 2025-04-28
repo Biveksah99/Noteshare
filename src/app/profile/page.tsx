@@ -2,7 +2,7 @@
 
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar"
 import {Button} from "@/components/ui/button"
-import {Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter} from "@/components/ui/card"
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card"
 import {
   Form,
   FormControl,
@@ -39,6 +39,7 @@ const ProfilePage = () => {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [profileImage, setProfileImage] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     defaultValues: {
@@ -60,6 +61,17 @@ const ProfilePage = () => {
     })
     setOpen(false); // Close the dialog after submitting
   }
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-background">
@@ -164,10 +176,23 @@ const ProfilePage = () => {
         </CardHeader>
         <CardContent>
           <div className="flex items-center space-x-4 mb-4">
-            <Avatar className="h-12 w-12">
-              <AvatarImage src="https://picsum.photos/id/237/200/300" alt="Profile"/>
-              <AvatarFallback>JD</AvatarFallback>
-            </Avatar>
+              <Label htmlFor="profile-image-upload">
+                <Avatar className="h-12 w-12 cursor-pointer">
+                  {profileImage ? (
+                    <AvatarImage src={profileImage} alt="Profile" />
+                  ) : (
+                    <AvatarImage src="https://picsum.photos/id/237/200/300" alt="Profile" />
+                  )}
+                  <AvatarFallback>JD</AvatarFallback>
+                </Avatar>
+                <Input
+                  type="file"
+                  id="profile-image-upload"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                  accept="image/*"
+                />
+              </Label>
             <div>
               <div className="text-lg font-semibold">{form.getValues("fullName")}</div>
               <div className="text-sm text-muted-foreground">{form.getValues("contactNumber")}</div>
