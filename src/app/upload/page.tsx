@@ -21,7 +21,7 @@ const formSchema = z.object({
   }),
   title: z.string().min(2, {
     message: "Title must be at least 2 characters.",
-  }),
+  }).max(200, {message: "Title must be at most 40 words."}),
   description: z.string().min(10, {
     message: "Description must be at least 10 characters.",
   }),
@@ -144,7 +144,7 @@ const UploadPage = () => {
                   <FormItem>
                     <FormLabel>Title</FormLabel>
                     <FormControl>
-                      <Input placeholder="Give your notes a descriptive title." {...field} />
+                      <Input placeholder="Give your notes a descriptive title." {...field} maxLength={200} />
                     </FormControl>
                     <FormDescription>
                       Give your notes a descriptive title.
