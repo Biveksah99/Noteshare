@@ -11,7 +11,13 @@ import {format} from 'date-fns';
 const CategoryDetailPage = () => {
   const params = useParams();
   const router = useRouter();
-  const category = (params && params.category) ? params.category as string : '';
+  const category = React.useMemo(() => {
+    if (!params || !params.category) {
+      return '';
+    }
+    return params.category as string;
+  }, [params]);
+
   const [notes, setNotes] = useState<any[]>([]);
 
   useEffect(() => {
@@ -40,7 +46,7 @@ const CategoryDetailPage = () => {
         if (fileType.startsWith('image/')) {
           return (
             <div key={index} className="flex justify-center mb-2">
-              <Link href={`/view-note?id=${note.id}&category=${category}&fileIndex=${index}`}>
+              <Link href={`/view-note?id=${note.id}&category=${category}&fileIndex=${index}`} >
                 <img
                   src={fileURL}
                   alt={`File ${index + 1}`}
@@ -88,6 +94,7 @@ const CategoryDetailPage = () => {
           <div key={note.id} className="inline-block w-full md:w-1/2 lg:w-1/3 px-2">
             <Card className="mb-4 neumorphic">
               <CardHeader className="flex flex-row items-center">
+                <Link href={`/view-note?id=${note.id}&category=${category}`} className="flex items-center">
                 <Avatar className="mr-4 h-8 w-8">
                   <AvatarImage src="https://picsum.photos/id/237/200/300" alt={note.uploader}/>
                   <AvatarFallback>{note.uploader.substring(0, 2)}</AvatarFallback>
@@ -98,6 +105,7 @@ const CategoryDetailPage = () => {
                     Uploaded by {note.uploader} on {format(new Date(note.timestamp), 'yyyy-MM-dd HH:mm')}
                   </CardDescription>
                 </div>
+                </Link>
               </CardHeader>
               <CardContent>
                 <CardDescription className="mb-4">{note.description}</CardDescription>
