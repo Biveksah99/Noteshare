@@ -54,6 +54,9 @@ const CategoryDetailPage = () => {
                 Uploaded by {note.uploader} on {format(new Date(note.timestamp), 'yyyy-MM-dd HH:mm')}
               </CardDescription>
             </CardHeader>
+            <CardContent>
+              <CardDescription>{note.description}</CardDescription>
+            </CardContent>
           </Card>
         ))}
       </div>
