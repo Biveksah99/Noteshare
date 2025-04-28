@@ -9,6 +9,7 @@ import {useRouter} from 'next/navigation';
 import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
 import {Book, Brain, Calendar} from "lucide-react";
 import {format} from 'date-fns';
+// import {Calendar as NepaliCalendar} from 'nepali-date-converter';
 
 const announcements = [
   {
@@ -35,14 +36,18 @@ const Home = () => {
     allKeys.forEach(key => {
       try {
         const item = localStorage.getItem(key);
-        if (item) {
-          const parsedItem = JSON.parse(item);
-          if (Array.isArray(parsedItem) && parsedItem.length > 0 && parsedItem[0].hasOwnProperty('timestamp')) {
-            uploads.push(...parsedItem);
+        if (item && typeof item === 'string') { // Check if item is a string
+          try {
+            const parsedItem = JSON.parse(item);
+            if (Array.isArray(parsedItem) && parsedItem.length > 0 && parsedItem[0].hasOwnProperty('timestamp')) {
+              uploads.push(...parsedItem);
+            }
+          } catch (parseError) {
+            console.error("Failed to parse item from localStorage", parseError);
           }
         }
       } catch (e) {
-        console.error("Failed to parse item from localStorage", e);
+        console.error("Failed to retrieve item from localStorage", e);
       }
     });
 
@@ -56,15 +61,24 @@ const Home = () => {
     router.push('/upload'); // Navigate to the /upload route
   };
 
+  const getNepaliDate = () => {
+    const today = new Date();
+    const nepaliDate = today.toLocaleDateString('en-NP', { // Use Nepali locale
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    });
+    return nepaliDate;
+  };
+
+
   return (
     <div className="container mx-auto p-6">
       <div className="flex justify-end">
-        <Button variant="ghost" size="icon">
-          <Calendar className="h-5 w-5"/>
+      <Button variant="ghost" size="icon">
+          {getNepaliDate()}
         </Button>
       </div>
-      {/* Search Bar */}
-      <Input type="search" placeholder="Search study materials..." className="mb-4"/>
 
       {/* Announcements Section */}
       <section className="mb-8">
