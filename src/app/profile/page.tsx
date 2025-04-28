@@ -22,7 +22,7 @@ import {useState} from "react"
 import {useForm} from "react-hook-form"
 import * as z from "zod"
 import {Edit, Check} from "lucide-react";
-import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger} from "@/components/ui/dialog";
+import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter} from "@/components/ui/dialog";
 
 const formSchema = z.object({
   fullName: z.string().min(2, {
