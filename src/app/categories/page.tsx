@@ -11,6 +11,7 @@ import {
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/components/ui/accordion";
+import {Book, Brain} from "lucide-react";
 
 const CategoriesPage = () => {
   const [categories, setCategories] = useState([
@@ -52,8 +53,13 @@ const CategoriesPage = () => {
 
       <Accordion type="single" collapsible>
         {categories.map((category, index) => (
-          <AccordionItem key={index} value={`category-${index}`}>
-            <AccordionTrigger>{category}</AccordionTrigger>
+          <AccordionItem key={index} value={`category-${index}`} className="neumorphic mb-2">
+            <AccordionTrigger>
+              <div className="flex items-center">
+                <Book className="mr-2 h-5 w-5"/>
+                {category}
+              </div>
+            </AccordionTrigger>
             <AccordionContent>
               <p>
                 Materials related to {category} will be displayed here.

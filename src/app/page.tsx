@@ -8,6 +8,7 @@ import {useEffect, useState} from 'react';
 import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from '@/components/ui/accordion';
 import {useRouter} from 'next/navigation';
 import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
+import {Book, Brain} from "lucide-react";
 
 const categoriesData = [
   'English',
@@ -89,7 +90,7 @@ const Home = () => {
       <section className="mb-8">
         <h2 className="text-2xl font-semibold mb-4">Announcements</h2>
         {announcements.map((announcement) => (
-          <Card key={announcement.id} className="mb-4">
+          <Card key={announcement.id} className="mb-4 neumorphic">
             <CardHeader>
               <CardTitle>{announcement.title}</CardTitle>
             </CardHeader>
@@ -104,7 +105,7 @@ const Home = () => {
       <section className="mb-8">
         <h2 className="text-2xl font-semibold mb-4">Recent Uploads</h2>
         {recentUploads.map((upload) => (
-          <Card key={upload.id} className="mb-4">
+          <Card key={upload.id} className="mb-4 neumorphic">
             <CardHeader className="flex flex-row items-center">
               <Avatar className="mr-4 h-8 w-8">
                 <AvatarImage src="https://picsum.photos/id/237/200/300" alt={upload.uploader}/>
@@ -130,8 +131,13 @@ const Home = () => {
         <h2 className="text-2xl font-semibold mb-4">Categories</h2>
         <Accordion type="single" collapsible>
           {categories.map((category, index) => (
-            <AccordionItem key={index} value={`category-${index}`}>
-              <AccordionTrigger>{category}</AccordionTrigger>
+            <AccordionItem key={index} value={`category-${index}`} className="neumorphic mb-2">
+              <AccordionTrigger>
+                <div className="flex items-center">
+                  <Book className="mr-2 h-5 w-5"/>
+                  {category}
+                </div>
+              </AccordionTrigger>
               <AccordionContent>
                 <p>
                   Materials related to {category} will be displayed here.
