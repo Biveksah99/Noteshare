@@ -28,8 +28,16 @@ const CategoryDetailPage = () => {
 
   const renderFile = (note: any) => {
     if (note.file) {
-      const fileType = note.file.type;
-      const fileURL = URL.createObjectURL(note.file);
+      let fileURL = '';
+      if (typeof note.file === 'string') {
+        // If note.file is already a string (data URL), use it directly
+        fileURL = note.file;
+      } else {
+        // If note.file is a File object, create a data URL
+        fileURL = URL.createObjectURL(note.file);
+      }
+
+      const fileType = note.file.type || '';
 
       if (fileType.startsWith('image/')) {
         return (
@@ -53,6 +61,8 @@ const CategoryDetailPage = () => {
             href={fileURL}
             download={note.title}
             className="underline text-blue-500"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             Download File
           </a>

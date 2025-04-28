@@ -51,13 +51,26 @@ const UploadPage = () => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
 
+    // Convert file to data URL
+    const file = values.file;
+    let fileDataUrl = null;
+    if (file) {
+      fileDataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
     const newNote = {
       id: Date.now(),
       title: values.title,
       description: values.description,
       uploader: 'CurrentUser', // Replace with actual user info
       timestamp: new Date().toISOString(),
-      file: values.file,
+      file: fileDataUrl, // Store the data URL
+      type: file?.type, // Store the MIME type
     };
 
     // Load existing notes for the category or initialize an empty array
