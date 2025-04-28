@@ -13,6 +13,7 @@ import {useState, useEffect} from "react"
 import {useForm} from "react-hook-form"
 import * as z from "zod"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
+import { File } from "lucide-react";
 
 const formSchema = z.object({
   category: z.string().min(2, {
@@ -33,6 +34,7 @@ const UploadPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter()
   const [categories, setCategories] = useState<string[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]); // State to hold uploaded files
 
   useEffect(() => {
     // Load categories from local storage on component mount
@@ -93,6 +95,12 @@ const UploadPage = () => {
     })
     router.push('/');
   }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setUploadedFiles((prevFiles) => [...prevFiles, ...files]); // Append new files to the existing state
+    form.setValue("files", [...uploadedFiles, ...files]); // Update form's files array
+  };
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-background">
@@ -165,25 +173,36 @@ const UploadPage = () => {
                   </FormItem>
                 )}
               />
-              <FormField
+             <FormField
                 control={form.control}
                 name="files"
-                render={({field}) => (
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel>Upload Files</FormLabel>
                     <FormControl>
                       <Input
                         type="file"
                         multiple
-                        onChange={(e) => {
-                          field.onChange(Array.from(e.target.files || []));
-                        }}
+                        onChange={handleFileChange} // Use the custom handler
                       />
                     </FormControl>
                     <FormDescription>
                       Supported files: PDF, Word, PPT, Images
                     </FormDescription>
                     <FormMessage />
+                     {uploadedFiles.length > 0 && (
+                      <div className="mt-2">
+                        Uploaded Files:
+                        <ul>
+                          {uploadedFiles.map((file, index) => (
+                            <li key={index} className="flex items-center space-x-2">
+                              <File className="h-4 w-4" />
+                              <span>{file.name}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </FormItem>
                 )}
               />
