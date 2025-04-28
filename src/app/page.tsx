@@ -45,6 +45,8 @@ const Home = () => {
           } catch (e) {
             console.warn(`Failed to parse item from localStorage for key ${key}.  It may not be a valid JSON object; skipping.`, e);
           }
+        } else {
+          console.warn(`Item with key ${key} is not a string, skipping. Value:`, item);
         }
       } catch (e) {
         console.error("Failed to retrieve item from localStorage", e);
@@ -53,7 +55,7 @@ const Home = () => {
 
     // Sort uploads by timestamp and take the most recent ones
     uploads.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    setRecentUploads(uploads.slice(0, 5)); // Display the 5 most recent uploads
+    setRecentUploads(uploads.slice(0, 2)); // Display the 2 most recent uploads
 
   }, []);
 
