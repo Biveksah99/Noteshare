@@ -1,13 +1,16 @@
 "use client";
 
 import React, {useEffect, useState} from 'react';
-import {useParams} from 'next/navigation';
+import {useParams, useRouter} from 'next/navigation';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 import {Book} from "lucide-react";
+import Link from "next/link";
+import {format} from 'date-fns';
 
 const CategoryDetailPage = () => {
   const params = useParams();
+  const router = useRouter();
   const category = (params && params.category) ? params.category as string : '';
   const [notes, setNotes] = useState<any[]>([]);
 
@@ -36,11 +39,13 @@ const CategoryDetailPage = () => {
       if (fileType.startsWith('image/')) {
         return (
           <div className="flex justify-center">
-            <img
-              src={fileURL}
-              alt={note.title}
-              className="max-w-full h-auto rounded-md shadow-md"
-            />
+            <Link href={`/view-note?id=${note.id}&category=${category}`}>
+              <img
+                src={fileURL}
+                alt={note.title}
+                className="max-w-full h-auto rounded-md shadow-md cursor-pointer"
+              />
+            </Link>
           </div>
         );
       } else if (fileType === 'application/pdf') {
@@ -89,7 +94,7 @@ const CategoryDetailPage = () => {
                 <div>
                   <CardTitle>{note.title}</CardTitle>
                   <CardDescription>
-                    Uploaded by {note.uploader} on {new Date(note.timestamp).toLocaleDateString()}
+                    Uploaded by {note.uploader} on {format(new Date(note.timestamp), 'yyyy-MM-dd HH:mm')}
                   </CardDescription>
                 </div>
               </CardHeader>
