@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {useParams} from 'next/navigation';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
@@ -9,24 +9,15 @@ import {Book} from "lucide-react";
 const CategoryDetailPage = () => {
   const params = useParams();
   const category = params.category as string;
+  const [notes, setNotes] = useState<any[]>([]);
 
-  // Mock data for notes
-  const notes = [
-    {
-      id: 1,
-      title: `${category} Notes - Chapter 1`,
-      description: 'Detailed notes for chapter 1.',
-      uploader: 'John Doe',
-      timestamp: '2024-07-16T10:00:00',
-    },
-    {
-      id: 2,
-      title: `${category} Summary`,
-      description: 'A quick summary of key concepts.',
-      uploader: 'Jane Smith',
-      timestamp: '2024-07-15T14:30:00',
-    },
-  ];
+  useEffect(() => {
+    // Load notes from local storage based on the category
+    const storedNotes = localStorage.getItem(category);
+    if (storedNotes) {
+      setNotes(JSON.parse(storedNotes));
+    }
+  }, [category]);
 
   return (
     <div className="container mx-auto p-6">

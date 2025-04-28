@@ -7,7 +7,8 @@ import {Input} from '@/components/ui/input';
 import {useEffect, useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
-import {Book, Brain} from "lucide-react";
+import {Book, Brain, Calendar} from "lucide-react";
+import {format} from 'date-fns';
 
 const announcements = [
   {
@@ -22,47 +23,34 @@ const announcements = [
   },
 ];
 
-const recentUploads = [
-  {
-    id: 1,
-    title: 'Economics Notes - Chapter 3',
-    description: 'Detailed notes on Microeconomics concepts.',
-    uploader: 'John Doe',
-    timestamp: '2024-07-15T12:30:00',
-  },
-  {
-    id: 2,
-    title: 'Maths Cheat Sheet',
-    description: 'Quick formulas for the upcoming exam.',
-    uploader: 'Jane Smith',
-    timestamp: '2024-07-14T18:00:00',
-  },
-];
-
 const Home = () => {
   const router = useRouter();
-  const [categories, setCategories] = useState([]);
-  const [newCategory, setNewCategory] = useState('');
+  const [recentUploads, setRecentUploads] = useState<any[]>([]);
 
   useEffect(() => {
-    // Load categories from local storage on component mount
-    const storedCategories = localStorage.getItem('categories');
-    if (storedCategories) {
-      setCategories(JSON.parse(storedCategories));
-    }
+    // Load recent uploads from local storage
+    const allKeys = Object.keys(localStorage);
+    const uploads: any[] = [];
+
+    allKeys.forEach(key => {
+      try {
+        const item = localStorage.getItem(key);
+        if (item) {
+          const parsedItem = JSON.parse(item);
+          if (Array.isArray(parsedItem) && parsedItem.length > 0 && parsedItem[0].hasOwnProperty('timestamp')) {
+            uploads.push(...parsedItem);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to parse item from localStorage", e);
+      }
+    });
+
+    // Sort uploads by timestamp and take the most recent ones
+    uploads.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    setRecentUploads(uploads.slice(0, 5)); // Display the 5 most recent uploads
+
   }, []);
-
-  useEffect(() => {
-    // Save categories to local storage whenever it changes
-    localStorage.setItem('categories', JSON.stringify(categories));
-  }, [categories]);
-
-  const addCategory = () => {
-    if (newCategory.trim() !== '') {
-      setCategories((prevCategories) => [...prevCategories, newCategory]);
-      setNewCategory('');
-    }
-  };
 
   const handleUploadClick = () => {
     router.push('/upload'); // Navigate to the /upload route
@@ -70,12 +58,17 @@ const Home = () => {
 
   return (
     <div className="container mx-auto p-6">
+      <div className="flex justify-end">
+        <Button variant="ghost" size="icon">
+          <Calendar className="h-5 w-5"/>
+        </Button>
+      </div>
       {/* Search Bar */}
       <Input type="search" placeholder="Search study materials..." className="mb-4"/>
 
       {/* Announcements Section */}
       <section className="mb-8">
-        <h2 className="text-2xl font-semibold mb-4">Announcements</h2>
+        <h2 className="text-2xl font-semibold mb-4">Notice Board</h2>
         {announcements.map((announcement) => (
           <Card key={announcement.id} className="mb-4 neumorphic">
             <CardHeader>
@@ -102,7 +95,7 @@ const Home = () => {
                 <CardTitle>{upload.title}</CardTitle>
                 <CardDescription>
                   Uploaded by {upload.uploader} on{' '}
-                  {new Date(upload.timestamp).toLocaleDateString()}
+                  {format(new Date(upload.timestamp), 'yyyy-MM-dd HH:mm')}
                 </CardDescription>
               </div>
             </CardHeader>

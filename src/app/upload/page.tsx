@@ -18,6 +18,9 @@ const formSchema = z.object({
   category: z.string().min(2, {
     message: "Category must be at least 2 characters.",
   }),
+  title: z.string().min(2, {
+    message: "Title must be at least 2 characters.",
+  }),
   description: z.string().min(10, {
     message: "Description must be at least 10 characters.",
   }),
@@ -40,12 +43,33 @@ const UploadPage = () => {
   const form = useForm<z.infer<typeof formSchema>>({
     defaultValues: {
       category: "",
+      title: "",
       description: "",
     },
   })
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+
+    const newNote = {
+      id: Date.now(),
+      title: values.title,
+      description: values.description,
+      uploader: 'CurrentUser', // Replace with actual user info
+      timestamp: new Date().toISOString(),
+      file: values.file,
+    };
+
+    // Load existing notes for the category or initialize an empty array
+    const storedNotes = localStorage.getItem(values.category);
+    const existingNotes = storedNotes ? JSON.parse(storedNotes) : [];
+
+    // Add the new note to the existing notes
+    const updatedNotes = [...existingNotes, newNote];
+
+    // Store the updated notes back in local storage
+    localStorage.setItem(values.category, JSON.stringify(updatedNotes));
+
     // Simulate a delay
     await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsLoading(false);
@@ -86,6 +110,22 @@ const UploadPage = () => {
                     </Select>
                     <FormDescription>
                       Select the category for your notes.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="title"
+                render={({field}) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Give your notes a descriptive title." {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Give your notes a descriptive title.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -146,4 +186,3 @@ const UploadPage = () => {
 }
 
 export default UploadPage
-
