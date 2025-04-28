@@ -47,7 +47,11 @@ const CategoryDetailPage = () => {
           <CardContent>
             <CardDescription>{note.description}</CardDescription>
             {note.file && (
-              <a href={URL.createObjectURL(note.file)} download={note.title} className="underline text-blue-500">
+              <a
+                href={URL.createObjectURL(new Blob([note.file]))} // Convert file object to Blob
+                download={note.title}
+                className="underline text-blue-500"
+              >
                 Download File
               </a>
             )}
