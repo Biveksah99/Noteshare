@@ -12,6 +12,7 @@ import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/components/ui/accordion";
 import {Book, Brain} from "lucide-react";
+import {useRouter} from "next/navigation";
 
 const CategoriesPage = () => {
   const [categories, setCategories] = useState([
@@ -26,6 +27,7 @@ const CategoriesPage = () => {
     'Business Maths',
   ]);
   const [newCategory, setNewCategory] = useState('');
+  const router = useRouter();
 
   useEffect(() => {
     // Load categories from local storage on component mount
@@ -47,6 +49,10 @@ const CategoriesPage = () => {
     }
   };
 
+  const handleCategoryClick = (category: string) => {
+    router.push(`/category/${category}`);
+  };
+
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-semibold mb-4">Categories</h1>
@@ -54,7 +60,7 @@ const CategoriesPage = () => {
       <Accordion type="single" collapsible>
         {categories.map((category, index) => (
           <AccordionItem key={index} value={`category-${index}`} className="neumorphic mb-2">
-            <AccordionTrigger>
+            <AccordionTrigger onClick={() => handleCategoryClick(category)}>
               <div className="flex items-center">
                 <Book className="mr-2 h-5 w-5"/>
                 {category}
