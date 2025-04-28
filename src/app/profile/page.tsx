@@ -21,6 +21,7 @@ import {useRouter} from "next/navigation"
 import {useState} from "react"
 import {useForm} from "react-hook-form"
 import * as z from "zod"
+import {Edit} from "lucide-react";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -55,11 +56,16 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="flex justify-center items-center h-screen bg-background">
+    <div className="flex justify-center items-center min-h-screen bg-background">
       <Card className="w-[500px] bg-card text-card-foreground shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl font-semibold">Your Profile</CardTitle>
-          <CardDescription>Manage your profile information.</CardDescription>
+        <CardHeader className="flex flex-row justify-between items-center">
+          <div>
+            <CardTitle className="text-2xl font-semibold">Your Profile</CardTitle>
+            <CardDescription>Manage your profile information.</CardDescription>
+          </div>
+          <Button variant="ghost" size="icon">
+            <Edit className="h-5 w-5"/>
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="flex items-center space-x-4 mb-4">
@@ -125,4 +131,3 @@ const ProfilePage = () => {
 }
 
 export default ProfilePage
-
