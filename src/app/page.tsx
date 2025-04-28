@@ -3,7 +3,6 @@
 import React from 'react';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
-import {Input} from '@/components/ui/input';
 import {useEffect, useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
