@@ -6,6 +6,7 @@ import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/compo
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 import {format} from 'date-fns';
 import Link from "next/link";
+import {File} from "lucide-react";
 
 const CategoryDetailPage = () => {
   const params = useParams();
@@ -55,7 +56,7 @@ const CategoryDetailPage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <CardDescription>{note.description}</CardDescription>
+              <CardDescription>{note.description.substring(0, 50)}...</CardDescription>
             </CardContent>
           </Card>
         ))}
