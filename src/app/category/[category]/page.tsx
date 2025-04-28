@@ -8,21 +8,23 @@ import {Book} from "lucide-react";
 
 const CategoryDetailPage = () => {
   const params = useParams();
-  const category = params.category as string;
+  const category = (params && params.category) ? params.category as string : '';
   const [notes, setNotes] = useState<any[]>([]);
 
   useEffect(() => {
     // Load notes from local storage based on the category
-    const storedNotes = localStorage.getItem(category);
-    if (storedNotes) {
-      try {
-        setNotes(JSON.parse(storedNotes));
-      } catch (error) {
-        console.error("Error parsing stored notes:", error);
-        setNotes([]); // Set to empty array to prevent further errors
+    if (category) {
+      const storedNotes = localStorage.getItem(category);
+      if (storedNotes) {
+        try {
+          setNotes(JSON.parse(storedNotes));
+        } catch (error) {
+          console.error("Error parsing stored notes:", error);
+          setNotes([]); // Set to empty array to prevent further errors
+        }
+      } else {
+        setNotes([]); // Ensure notes are empty if nothing is in local storage
       }
-    } else {
-      setNotes([]); // Ensure notes are empty if nothing is in local storage
     }
   }, [category]);
 
