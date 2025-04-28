@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import {cn} from "@/lib/utils";
+import {Home, List} from "lucide-react";
 
 const Navbar = React.forwardRef<
   HTMLDivElement,
@@ -17,8 +18,13 @@ const Navbar = React.forwardRef<
     {...props}
   >
     <div className="container flex items-center justify-between p-4">
-      <Link href="/" className="text-xl font-bold">
+      <Link href="/" className="text-xl font-bold flex items-center">
+        <Home className="mr-2"/>
         NoteShare
+      </Link>
+      <Link href="/categories" className="text-xl font-bold flex items-center">
+        <List className="mr-2"/>
+        Categories
       </Link>
     </div>
   </div>

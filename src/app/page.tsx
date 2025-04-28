@@ -5,22 +5,9 @@ import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/compo
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
 import {useEffect, useState} from 'react';
-import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from '@/components/ui/accordion';
 import {useRouter} from 'next/navigation';
 import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
 import {Book, Brain} from "lucide-react";
-
-const categoriesData = [
-  'English',
-  'Nepali',
-  'Basic Maths',
-  'Economics',
-  'Accountancy',
-  'Business Studies',
-  'Computer',
-  'Social Studies',
-  'Business Maths',
-];
 
 const announcements = [
   {
@@ -54,7 +41,7 @@ const recentUploads = [
 
 const Home = () => {
   const router = useRouter();
-  const [categories, setCategories] = useState(categoriesData);
+  const [categories, setCategories] = useState([]);
   const [newCategory, setNewCategory] = useState('');
 
   useEffect(() => {
@@ -124,42 +111,6 @@ const Home = () => {
             </CardContent>
           </Card>
         ))}
-      </section>
-
-      {/* Categories Section */}
-      <section className="mb-8">
-        <h2 className="text-2xl font-semibold mb-4">Categories</h2>
-        <Accordion type="single" collapsible>
-          {categories.map((category, index) => (
-            <AccordionItem key={index} value={`category-${index}`} className="neumorphic mb-2">
-              <AccordionTrigger>
-                <div className="flex items-center">
-                  <Book className="mr-2 h-5 w-5"/>
-                  {category}
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <p>
-                  Materials related to {category} will be displayed here.
-                </p>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-
-        {/* Add Category Input */}
-        <div className="flex items-center mt-4">
-          <Input
-            type="text"
-            placeholder="Add new category"
-            value={newCategory}
-            onChange={(e) => setNewCategory(e.target.value)}
-            className="mr-2"
-          />
-          <Button variant="secondary" onClick={addCategory}>
-            Add (+)
-          </Button>
-        </div>
       </section>
 
       {/* Upload Button */}

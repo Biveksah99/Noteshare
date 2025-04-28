@@ -11,7 +11,7 @@ import {
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from "@/components/ui/accordion";
-import {Book, Brain} from "lucide-react";
+import {Book, Brain, Calendar} from "lucide-react";
 import {useRouter} from "next/navigation";
 
 const CategoriesPage = () => {
@@ -55,6 +55,11 @@ const CategoriesPage = () => {
 
   return (
     <div className="container mx-auto p-6">
+      <div className="flex justify-end">
+        <Button variant="ghost" size="icon">
+          <Calendar className="h-5 w-5"/>
+        </Button>
+      </div>
       <h1 className="text-3xl font-semibold mb-4">Categories</h1>
 
       <Accordion type="single" collapsible>
