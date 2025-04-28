@@ -4,15 +4,17 @@ import React, {useEffect, useState} from 'react';
 import {useRouter, useSearchParams} from 'next/navigation';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
-import {Book} from "lucide-react";
 import {format} from 'date-fns';
 
 const ViewNotePage = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const noteId = searchParams.get('id');
-  const category = searchParams.get('category');
-  const fileIndex = searchParams.get('fileIndex');
+
+  // Extract parameters using React.use()
+  const noteId = React.useMemo(() => searchParams.get('id'), [searchParams]);
+  const category = React.useMemo(() => searchParams.get('category'), [searchParams]);
+  const fileIndex = React.useMemo(() => searchParams.get('fileIndex'), [searchParams]);
+
   const [note, setNote] = useState<any>(null);
   const [fileURL, setFileURL] = useState<string | null>(null);
   const [fileType, setFileType] = useState<string | null>(null);
@@ -23,7 +25,7 @@ const ViewNotePage = () => {
       if (storedNotes) {
         try {
           const notes = JSON.parse(storedNotes);
-          const foundNote = notes.find((n: any) => n.id === parseInt(noteId));
+          const foundNote = notes.find((n: any) => n.id === parseInt(noteId as string));
           if (foundNote && foundNote.files && foundNote.files[fileIndex]) {
             setNote(foundNote);
             setFileURL(foundNote.files[fileIndex].url);
