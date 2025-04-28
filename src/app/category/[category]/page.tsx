@@ -28,16 +28,9 @@ const CategoryDetailPage = () => {
 
   const renderFile = (note: any) => {
     if (note.file) {
-      let fileURL = '';
-      if (typeof note.file === 'string') {
-        // If note.file is already a string (data URL), use it directly
-        fileURL = note.file;
-      } else {
-        // If note.file is a File object, create a data URL
-        fileURL = URL.createObjectURL(note.file);
-      }
+      const fileURL = note.file; // Use the data URL directly
 
-      const fileType = note.file.type || '';
+      const fileType = note.type || '';
 
       if (fileType.startsWith('image/')) {
         return (
