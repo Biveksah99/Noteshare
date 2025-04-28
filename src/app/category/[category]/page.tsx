@@ -35,31 +35,37 @@ const CategoryDetailPage = () => {
 
       if (fileType.startsWith('image/')) {
         return (
-          <img
-            src={fileURL}
-            alt={note.title}
-            className="max-w-full h-auto"
-          />
+          <div className="flex justify-center">
+            <img
+              src={fileURL}
+              alt={note.title}
+              className="max-w-full h-auto rounded-md shadow-md"
+            />
+          </div>
         );
       } else if (fileType === 'application/pdf') {
         return (
-          <embed
-            src={fileURL}
-            type="application/pdf"
-            className="w-full h-[500px]"
-          />
+          <div className="flex justify-center">
+            <embed
+              src={fileURL}
+              type="application/pdf"
+              className="w-full h-[500px] rounded-md shadow-md"
+            />
+          </div>
         );
       } else {
         return (
-          <a
-            href={fileURL}
-            download={note.title}
-            className="underline text-blue-500"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Download File
-          </a>
+          <div className="flex justify-center">
+            <a
+              href={fileURL}
+              download={note.title}
+              className="underline text-blue-500"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Download File
+            </a>
+          </div>
         );
       }
     }
@@ -88,7 +94,7 @@ const CategoryDetailPage = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <CardDescription>{note.description}</CardDescription>
+                <CardDescription className="mb-4">{note.description}</CardDescription>
                 {renderFile(note)}
               </CardContent>
             </Card>
