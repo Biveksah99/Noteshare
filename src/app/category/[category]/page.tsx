@@ -15,7 +15,14 @@ const CategoryDetailPage = () => {
     // Load notes from local storage based on the category
     const storedNotes = localStorage.getItem(category);
     if (storedNotes) {
-      setNotes(JSON.parse(storedNotes));
+      try {
+        setNotes(JSON.parse(storedNotes));
+      } catch (error) {
+        console.error("Error parsing stored notes:", error);
+        setNotes([]); // Set to empty array to prevent further errors
+      }
+    } else {
+      setNotes([]); // Ensure notes are empty if nothing is in local storage
     }
   }, [category]);
 
@@ -39,6 +46,11 @@ const CategoryDetailPage = () => {
           </CardHeader>
           <CardContent>
             <CardDescription>{note.description}</CardDescription>
+            {note.file && (
+              <a href={URL.createObjectURL(note.file)} download={note.title} className="underline text-blue-500">
+                Download File
+              </a>
+            )}
           </CardContent>
         </Card>
       ))}
