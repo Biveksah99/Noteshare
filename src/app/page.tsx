@@ -10,6 +10,7 @@ import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
 import {Book, Brain, Calendar} from "lucide-react";
 import {format} from 'date-fns';
 import {Globe} from "lucide-react";
+import Link from "next/link";
 
 const announcements = [
   {
@@ -101,24 +102,26 @@ const Home = () => {
       <section className="mb-8">
         <h2 className="text-2xl font-semibold mb-4">Recent Uploads</h2>
         {recentUploads.map((upload) => (
-          <Card key={upload.id} className="mb-4 neumorphic">
-            <CardHeader className="flex flex-row items-center">
-              <Avatar className="mr-4 h-8 w-8">
-                <AvatarImage src="https://picsum.photos/id/237/200/300" alt={upload.uploader}/>
-                <AvatarFallback>{upload.uploader.substring(0, 2)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <CardTitle>{upload.title}</CardTitle>
-                <CardDescription>
-                  Uploaded by {upload.uploader} on{' '}
-                  {format(new Date(upload.timestamp), 'yyyy-MM-dd HH:mm')}
-                </CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <CardDescription>{upload.description}</CardDescription>
-            </CardContent>
-          </Card>
+          <Link key={upload.id} href={`/category/${upload.category}`} className="block">
+            <Card className="mb-4 neumorphic">
+              <CardHeader className="flex flex-row items-center">
+                <Avatar className="mr-4 h-8 w-8">
+                  <AvatarImage src="https://picsum.photos/id/237/200/300" alt={upload.uploader}/>
+                  <AvatarFallback>{upload.uploader.substring(0, 2)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <CardTitle>{upload.title}</CardTitle>
+                  <CardDescription>
+                    Uploaded by {upload.uploader} on{' '}
+                    {format(new Date(upload.timestamp), 'yyyy-MM-dd HH:mm')}
+                  </CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>{upload.description}</CardDescription>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </section>
 
