@@ -13,23 +13,19 @@ const ViewNotePage = () => {
   // Extract parameters using React.use()
   const noteId = React.useMemo(() => searchParams.get('id'), [searchParams]);
   const category = React.useMemo(() => searchParams.get('category'), [searchParams]);
-  const fileIndex = React.useMemo(() => searchParams.get('fileIndex'), [searchParams]);
 
   const [note, setNote] = useState<any>(null);
-  const [fileURL, setFileURL] = useState<string | null>(null);
-  const [fileType, setFileType] = useState<string | null>(null);
+
 
   useEffect(() => {
-    if (category && noteId && fileIndex !== null) {
+    if (category && noteId) {
       const storedNotes = localStorage.getItem(category);
       if (storedNotes) {
         try {
           const notes = JSON.parse(storedNotes);
           const foundNote = notes.find((n: any) => n.id === parseInt(noteId as string));
-          if (foundNote && foundNote.files && foundNote.files[fileIndex]) {
+          if (foundNote) {
             setNote(foundNote);
-            setFileURL(foundNote.files[fileIndex].url);
-            setFileType(foundNote.files[fileIndex].type);
           } else {
             router.push(`/category/${category}`);
           }
@@ -42,9 +38,9 @@ const ViewNotePage = () => {
     } else {
       router.push('/');
     }
-  }, [category, noteId, fileIndex, router]);
+  }, [category, noteId, router]);
 
-  if (!note || !fileURL || !fileType) {
+  if (!note) {
     return <div>Loading...</div>;
   }
 
@@ -65,37 +61,41 @@ const ViewNotePage = () => {
         </CardHeader>
         <CardContent>
           <CardDescription className="mb-4">{note.description}</CardDescription>
-          {fileURL && fileType && fileType.startsWith('image/') && (
-            <div className="flex justify-center">
-              <img
-                src={fileURL}
-                alt={note.title}
-                className="max-w-full h-auto rounded-md shadow-md"
-              />
+          {note.files && note.files.map((file, index) => (
+            <div key={index} className="mb-4">
+              {file.type && file.type.startsWith('image/') && (
+                <div className="flex justify-center">
+                  <img
+                    src={file.url}
+                    alt={note.title}
+                    className="max-w-full h-auto rounded-md shadow-md"
+                  />
+                </div>
+              )}
+              {file.type && file.type === 'application/pdf' && (
+                <div className="flex justify-center">
+                  <embed
+                    src={file.url}
+                    type="application/pdf"
+                    className="w-full h-[500px] rounded-md shadow-md"
+                  />
+                </div>
+              )}
+              {file.type && !file.type.startsWith('image/') && file.type !== 'application/pdf' && (
+                <div className="flex justify-center">
+                  <a
+                    href={file.url}
+                    download={`${note.title}-${index + 1}`}
+                    className="underline text-blue-500"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Download File {index + 1}
+                  </a>
+                </div>
+              )}
             </div>
-          )}
-          {fileURL && fileType && fileType === 'application/pdf' && (
-            <div className="flex justify-center">
-              <embed
-                src={fileURL}
-                type="application/pdf"
-                className="w-full h-[500px] rounded-md shadow-md"
-              />
-            </div>
-          )}
-          {fileURL && fileType && !fileType.startsWith('image/') && fileType !== 'application/pdf' && (
-            <div className="flex justify-center">
-              <a
-                href={fileURL}
-                download={note.title}
-                className="underline text-blue-500"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Download File
-              </a>
-            </div>
-          )}
+          ))}
         </CardContent>
       </Card>
     </div>

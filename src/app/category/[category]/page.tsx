@@ -46,7 +46,7 @@ const CategoryDetailPage = () => {
           <Card key={note.id} className="mb-4 neumorphic">
             <CardHeader className="flex flex-col items-start">
               <Link
-                href={`/view-note?id=${note.id}&category=${category}&fileIndex=${index}`}
+                href={`/view-note?id=${note.id}&category=${category}`}
                 className="w-full"
               >
                 <CardTitle>{note.title}</CardTitle>

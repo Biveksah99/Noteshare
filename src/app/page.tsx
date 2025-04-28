@@ -101,7 +101,7 @@ const Home = () => {
       <section className="mb-8">
         <h2 className="text-2xl font-semibold mb-4">Recent Uploads</h2>
         {recentUploads.map((upload) => (
-          <Link key={upload.id} href={`/category/${upload.category}`} className="block">
+          <Link key={upload.id} href={`/view-note?id=${upload.id}&category=${upload.category}`} className="block">
             <Card className="mb-4 neumorphic">
               <CardHeader className="flex flex-row items-center">
                 <Avatar className="mr-4 h-8 w-8">
@@ -117,7 +117,7 @@ const Home = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <CardDescription>{upload.description}</CardDescription>
+                <CardDescription>{upload.description.substring(0, 50)}</CardDescription>
               </CardContent>
             </Card>
           </Link>
