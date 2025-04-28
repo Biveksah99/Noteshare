@@ -31,7 +31,7 @@ const CategoryDetailPage = () => {
     }
   }, [category]);
 
-  const renderFiles = (files: any[]) => {
+  const renderFiles = (files: any[], note: any) => {
     return files.map((file, index) => {
       if (file && file.url) {
         const fileURL = file.url;
@@ -101,7 +101,7 @@ const CategoryDetailPage = () => {
               </CardHeader>
               <CardContent>
                 <CardDescription className="mb-4">{note.description}</CardDescription>
-                {note.files && renderFiles(note.files)}
+                {note.files && renderFiles(note.files, note)}
               </CardContent>
             </Card>
           </div>
