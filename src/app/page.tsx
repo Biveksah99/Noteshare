@@ -42,8 +42,8 @@ const Home = () => {
             if (Array.isArray(parsedItem) && parsedItem.length > 0 && parsedItem[0].hasOwnProperty('timestamp')) {
               uploads.push(...parsedItem);
             }
-          } catch (parseError) {
-            console.error("Failed to parse item from localStorage", parseError, item); // Log the item that failed to parse
+          } catch (e) {
+            console.warn(`Failed to parse item from localStorage for key ${key}.  It may not be a valid JSON object; skipping.`, e);
           }
         }
       } catch (e) {
