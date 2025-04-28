@@ -9,7 +9,7 @@ import {useRouter} from 'next/navigation';
 import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
 import {Book, Brain, Calendar} from "lucide-react";
 import {format} from 'date-fns';
-// import {Calendar as NepaliCalendar} from 'nepali-date-converter';
+import {Globe} from "lucide-react";
 
 const announcements = [
   {
@@ -43,7 +43,7 @@ const Home = () => {
               uploads.push(...parsedItem);
             }
           } catch (parseError) {
-            console.error("Failed to parse item from localStorage", parseError);
+            console.error("Failed to parse item from localStorage", parseError, item); // Log the item that failed to parse
           }
         }
       } catch (e) {
@@ -63,26 +63,28 @@ const Home = () => {
 
   const getNepaliDate = () => {
     const today = new Date();
-    const nepaliDate = today.toLocaleDateString('en-NP', { // Use Nepali locale
+    return today.toLocaleDateString('en-NP', { // Use Nepali locale
       year: 'numeric',
       month: 'numeric',
       day: 'numeric',
     });
-    return nepaliDate;
   };
 
 
   return (
     <div className="container mx-auto p-6">
       <div className="flex justify-end">
-      <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" className="neumorphic">
           {getNepaliDate()}
         </Button>
       </div>
 
       {/* Announcements Section */}
       <section className="mb-8">
-        <h2 className="text-2xl font-semibold mb-4">Notice Board</h2>
+        <h2 className="text-2xl font-semibold mb-4 flex items-center justify-center">
+          <Globe className="mr-2"/>
+          Notice Board
+        </h2>
         {announcements.map((announcement) => (
           <Card key={announcement.id} className="mb-4 neumorphic">
             <CardHeader>
