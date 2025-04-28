@@ -9,13 +9,14 @@ import {Textarea} from "@/components/ui/textarea"
 import {toast} from "@/hooks/use-toast"
 import {cn} from "@/lib/utils"
 import {useRouter} from "next/navigation"
-import {useState} from "react"
+import {useState, useEffect} from "react"
 import {useForm} from "react-hook-form"
 import * as z from "zod"
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 
 const formSchema = z.object({
-  title: z.string().min(2, {
-    message: "Title must be at least 2 characters.",
+  category: z.string().min(2, {
+    message: "Category must be at least 2 characters.",
   }),
   description: z.string().min(10, {
     message: "Description must be at least 10 characters.",
@@ -26,10 +27,19 @@ const formSchema = z.object({
 const UploadPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter()
+  const [categories, setCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    // Load categories from local storage on component mount
+    const storedCategories = localStorage.getItem('categories');
+    if (storedCategories) {
+      setCategories(JSON.parse(storedCategories));
+    }
+  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     defaultValues: {
-      title: "",
+      category: "",
       description: "",
     },
   })
@@ -58,15 +68,24 @@ const UploadPage = () => {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="title"
+                name="category"
                 render={({field}) => (
                   <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Economics Notes - Chapter 3" {...field} />
-                    </FormControl>
+                    <FormLabel>Category</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a category"/>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category} value={category}>{category}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormDescription>
-                      Give your notes a descriptive title.
+                      Select the category for your notes.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -127,3 +146,4 @@ const UploadPage = () => {
 }
 
 export default UploadPage
+
