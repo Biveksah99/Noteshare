@@ -28,11 +28,24 @@ const CategoryDetailPage = () => {
 
   const renderFile = (note: any) => {
     if (note.file) {
-      const fileURL = note.file; // Use the data URL directly
+      let fileURL = note.file; // Use the data URL directly
 
       const fileType = note.type || '';
 
       if (fileType.startsWith('image/')) {
+        // Convert image to JPEG format
+        const img = new Image();
+        img.src = fileURL;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0);
+
+          // Convert the canvas to JPEG with 80% quality
+          fileURL = canvas.toDataURL('image/jpeg', 0.8);
+        };
         return (
           <img
             src={fileURL}
