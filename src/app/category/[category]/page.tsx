@@ -37,54 +37,6 @@ const CategoryDetailPage = () => {
     }
   }, [category]);
 
-  const renderFiles = (files: any[], note: any) => {
-    return files.map((file, index) => {
-      if (file && file.url) {
-        const fileURL = file.url;
-        const fileType = file.type || '';
-
-        if (fileType.startsWith('image/')) {
-          return (
-            <div key={index} className="flex justify-center mb-2">
-              <Link href={`/view-note?id=${note.id}&category=${category}&fileIndex=${index}`} >
-                <img
-                  src={fileURL}
-                  alt={`File ${index + 1}`}
-                  className="max-w-full h-auto rounded-md shadow-md cursor-pointer"
-                />
-              </Link>
-            </div>
-          );
-        } else if (fileType === 'application/pdf') {
-          return (
-            <div key={index} className="flex justify-center mb-2">
-              <embed
-                src={fileURL}
-                type="application/pdf"
-                className="w-full h-[500px] rounded-md shadow-md"
-              />
-            </div>
-          );
-        } else {
-          return (
-            <div key={index} className="flex justify-center mb-2">
-              <a
-                href={fileURL}
-                download={`file-${index + 1}`}
-                className="underline text-blue-500"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Download File {index + 1}
-              </a>
-            </div>
-          );
-        }
-      }
-      return null;
-    });
-  };
-
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-semibold mb-4">{category} Notes</h1>
@@ -95,22 +47,18 @@ const CategoryDetailPage = () => {
             <Card className="mb-4 neumorphic">
               <CardHeader className="flex flex-row items-center">
                 <Link href={`/view-note?id=${note.id}&category=${category}`} className="flex items-center">
-                <Avatar className="mr-4 h-8 w-8">
-                  <AvatarImage src="https://picsum.photos/id/237/200/300" alt={note.uploader}/>
-                  <AvatarFallback>{note.uploader.substring(0, 2)}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <CardTitle>{note.title}</CardTitle>
-                  <CardDescription>
-                    Uploaded by {note.uploader} on {format(new Date(note.timestamp), 'yyyy-MM-dd HH:mm')}
-                  </CardDescription>
-                </div>
+                  <Avatar className="mr-4 h-8 w-8">
+                    <AvatarImage src="https://picsum.photos/id/237/200/300" alt={note.uploader}/>
+                    <AvatarFallback>{note.uploader.substring(0, 2)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <CardTitle>{note.title}</CardTitle>
+                    <CardDescription>
+                      Uploaded by {note.uploader} on {format(new Date(note.timestamp), 'yyyy-MM-dd HH:mm')}
+                    </CardDescription>
+                  </div>
                 </Link>
               </CardHeader>
-              <CardContent>
-                <CardDescription className="mb-4">{note.description}</CardDescription>
-                {note.files && renderFiles(note.files, note)}
-              </CardContent>
             </Card>
           </div>
         ))}
