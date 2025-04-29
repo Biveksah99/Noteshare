@@ -1,6 +1,6 @@
 "use client";
 
-import {Home, Upload, List, User} from "lucide-react";
+import {Home, Upload, List, User, MessageSquare} from "lucide-react"; // Import MessageSquare icon
 import Link from "next/link";
 import React from "react";
 
@@ -19,6 +19,11 @@ const BottomNav = () => {
         <Link href="/categories" className="flex flex-col items-center neumorphic">
           <List className="h-6 w-6"/>
           Categories
+        </Link>
+         {/* Add Chat link */}
+         <Link href="/chat" className="flex flex-col items-center">
+          <MessageSquare className="h-6 w-6"/>
+          Chat
         </Link>
         <Link href="/profile" className="flex flex-col items-center">
           <User className="h-6 w-6"/>
