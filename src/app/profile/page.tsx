@@ -36,7 +36,12 @@ const formSchema = z.object({
   fullName: z.string().min(2, {
     message: "Full Name must be at least 2 characters.",
   }),
-  email: z.string().email({ message: "Invalid email address." }).optional(), // Added email validation
+  email: z.string()
+    .email({ message: "Invalid email format." }) // Basic email format check
+    .refine(email => email.endsWith('@gmail.com'), { // Custom refinement for @gmail.com
+      message: "Email must end with @gmail.com",
+    })
+    .optional(),
   gender: z.enum(["Male", "Female", "Other"]).optional(), // Use enum for gender
   contactNumber: z.string().optional(), // Renamed from phone for consistency
   address: z.string().optional(),
@@ -307,8 +312,11 @@ const ProfilePage = () => {
                       <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder="Your Email" {...field} />
+                          <Input type="email" placeholder="your.email@gmail.com" {...field} />
                         </FormControl>
+                         <FormDescription>
+                           Must be a @gmail.com address.
+                         </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -384,7 +392,7 @@ const ProfilePage = () => {
                         <FormLabel>Bio</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="Write a short bio about yourself."
+                            placeholder="Write a short bio about yourself (max 60 words)."
                             className="resize-none"
                             {...field}
                             maxLength={BIO_MAX_LENGTH} // Enforce in textarea as well
