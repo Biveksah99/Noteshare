@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, {useEffect, useState} from 'react';
@@ -130,7 +131,7 @@ const ViewNotePage = () => {
                 </div>
               )}
               {file && file.type && file.type === 'application/pdf' && (
-                <div className="flex justify-center">
+                <div className="flex justify-center relative">
                   <embed
                     src={file.url}
                     type="application/pdf"
@@ -180,19 +181,19 @@ const ViewNotePage = () => {
 
        {/* Image Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] w-auto h-auto p-2 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm">
-           <DialogHeader className="w-full flex flex-row justify-end p-2 absolute top-0 right-0 z-10">
-             {/* Download Button */}
-             {previewImageUrl && (
-                <a href={previewImageUrl} download={fileName}>
-                    <Button variant="ghost" size="icon" className="text-foreground hover:bg-muted/50" title="Download Image">
-                        <Download className="h-6 w-6" />
-                    </Button>
-                </a>
-             )}
-          </DialogHeader>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] w-auto h-auto p-0 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm relative">
+           {/* Close button remains at top right */}
+           <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-2 right-2 text-foreground hover:bg-muted/50 z-20"
+            onClick={() => setIsPreviewOpen(false)}
+            title="Close Preview"
+          >
+             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </Button>
           {previewImageUrl && (
-            <div className="flex-grow flex items-center justify-center overflow-hidden">
+            <div className="flex-grow flex items-center justify-center overflow-hidden w-full h-full">
               <img
                 src={previewImageUrl}
                 alt="Preview"
@@ -200,6 +201,18 @@ const ViewNotePage = () => {
               />
             </div>
           )}
+          {/* Download Button - Positioned at bottom right */}
+           {previewImageUrl && (
+                <a
+                    href={previewImageUrl}
+                    download={fileName}
+                    className="absolute bottom-4 right-4 z-20" // Positioned bottom right
+                 >
+                    <Button variant="default" size="icon" className="bg-primary/80 text-primary-foreground hover:bg-primary" title="Download Image">
+                        <Download className="h-6 w-6" />
+                    </Button>
+                </a>
+             )}
         </DialogContent>
       </Dialog>
     </div>
@@ -207,3 +220,4 @@ const ViewNotePage = () => {
 };
 
 export default ViewNotePage;
+
