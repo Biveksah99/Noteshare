@@ -5,9 +5,10 @@ import {useRouter, useSearchParams} from 'next/navigation';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 import {format} from 'date-fns';
-import {ChevronLeft, ChevronRight, Expand} from "lucide-react";
+import {ChevronLeft, ChevronRight, Download, Expand} from "lucide-react";
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import Link from "next/link"; // Import Link
 
 const ViewNotePage = () => {
   const searchParams = useSearchParams();
@@ -34,7 +35,8 @@ const ViewNotePage = () => {
             setNote(foundNote);
             const initialFileIndex = fileIndexParam ? parseInt(fileIndexParam, 10) : 0;
              // Ensure the index is within bounds
-            setCurrentFileIndex(Math.max(0, Math.min(initialFileIndex, foundNote.files.length - 1)));
+             const validIndex = Math.max(0, Math.min(initialFileIndex, (foundNote.files?.length || 1) - 1));
+            setCurrentFileIndex(validIndex);
           } else {
             router.push(`/category/${category}`);
           }
@@ -50,16 +52,35 @@ const ViewNotePage = () => {
   }, [category, noteId, router, fileIndexParam]);
 
   const handlePrevClick = () => {
-    setCurrentFileIndex((prevIndex) => (prevIndex > 0 ? prevIndex - 1 : (note?.files?.length || 1) - 1));
+    setCurrentFileIndex((prevIndex) => {
+      const newIndex = prevIndex > 0 ? prevIndex - 1 : (note?.files?.length || 1) - 1;
+      updateUrl(newIndex);
+      return newIndex;
+    });
   };
 
   const handleNextClick = () => {
-    setCurrentFileIndex((prevIndex) => (prevIndex < (note?.files?.length || 1) - 1 ? prevIndex + 1 : 0));
+    setCurrentFileIndex((prevIndex) => {
+        const newIndex = prevIndex < (note?.files?.length || 1) - 1 ? prevIndex + 1 : 0;
+        updateUrl(newIndex);
+        return newIndex;
+    });
   };
+
+  const updateUrl = (newIndex: number) => {
+     router.replace(`/view-note?id=${noteId}&category=${category}&fileIndex=${newIndex}`, { scroll: false });
+  };
+
 
   const handlePreviewClick = (imageUrl: string) => {
     setPreviewImageUrl(imageUrl);
     setIsPreviewOpen(true);
+  };
+
+  const getFileExtension = (mimeType: string | undefined): string => {
+    if (!mimeType) return 'file';
+    const parts = mimeType.split('/');
+    return parts.length > 1 ? parts[1] : 'file';
   };
 
   if (!note) {
@@ -67,14 +88,16 @@ const ViewNotePage = () => {
   }
 
   const file = note.files?.[currentFileIndex];
+  const fileName = `${note.title}_${currentFileIndex + 1}.${getFileExtension(file?.type)}`;
 
   return (
     <div className="container mx-auto p-6">
       <Card className="mb-4 neumorphic">
         <CardHeader className="flex flex-row items-center">
           <Avatar className="mr-4 h-8 w-8">
-            <AvatarImage src="https://picsum.photos/id/237/200/300" alt={note.uploader}/>
-            <AvatarFallback>{note.uploader.substring(0, 2)}</AvatarFallback>
+            {/* Use a placeholder or logic to get actual user avatar */}
+            <AvatarImage src="https://picsum.photos/id/1/32/32" alt={note.uploader}/>
+            <AvatarFallback>{note.uploader ? note.uploader.substring(0, 2).toUpperCase() : '??'}</AvatarFallback>
           </Avatar>
           <div>
             <CardTitle>{note.title}</CardTitle>
@@ -88,17 +111,19 @@ const ViewNotePage = () => {
           {note.files && note.files.length > 0 && (
             <div className="mb-4 relative">
               {file && file.type && file.type.startsWith('image/') && (
-                <div className="flex justify-center items-center relative">
+                <div className="flex justify-center items-center relative group bg-muted rounded-md overflow-hidden">
                   <img
                     src={file.url}
-                    alt={note.title + ` - ${currentFileIndex + 1}`}
-                    className="max-w-full max-h-[60vh] h-auto rounded-md shadow-md object-contain"
+                    alt={`${note.title} - File ${currentFileIndex + 1}`}
+                    className="max-w-full max-h-[60vh] h-auto object-contain cursor-pointer"
+                    onClick={() => handlePreviewClick(file.url)} // Open preview on image click too
                   />
-                  <Button
+                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute top-2 right-2 bg-black/50 text-white hover:bg-black/75"
+                    className="absolute top-2 right-2 bg-black/50 text-white hover:bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={() => handlePreviewClick(file.url)}
+                    title="Expand Image"
                   >
                     <Expand className="h-5 w-5" />
                   </Button>
@@ -111,6 +136,16 @@ const ViewNotePage = () => {
                     type="application/pdf"
                     className="w-full h-[70vh] rounded-md shadow-md"
                   />
+                 {/* Add download button for PDF */}
+                  <a
+                    href={file.url}
+                    download={fileName}
+                    className="absolute top-2 right-2"
+                  >
+                     <Button variant="ghost" size="icon" className="bg-black/50 text-white hover:bg-black/75" title="Download PDF">
+                        <Download className="h-5 w-5" />
+                    </Button>
+                  </a>
                 </div>
               )}
               {file && file.type && !file.type.startsWith('image/') && file.type !== 'application/pdf' && (
@@ -118,12 +153,12 @@ const ViewNotePage = () => {
                    <p className="mb-2 text-muted-foreground">Unsupported file type for inline preview.</p>
                   <a
                     href={file.url}
-                    download={`${note.title}_${currentFileIndex+1}`} // Add index to filename
-                    className="underline text-primary"
+                    download={fileName}
+                    className="underline text-primary inline-flex items-center gap-1"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Download File
+                    <Download className="h-4 w-4" /> Download File
                   </a>
                 </div>
               )}
@@ -145,13 +180,25 @@ const ViewNotePage = () => {
 
        {/* Image Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-4xl p-2">
+        <DialogContent className="max-w-[95vw] max-h-[95vh] w-auto h-auto p-2 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm">
+           <DialogHeader className="w-full flex flex-row justify-end p-2 absolute top-0 right-0 z-10">
+             {/* Download Button */}
+             {previewImageUrl && (
+                <a href={previewImageUrl} download={fileName}>
+                    <Button variant="ghost" size="icon" className="text-foreground hover:bg-muted/50" title="Download Image">
+                        <Download className="h-6 w-6" />
+                    </Button>
+                </a>
+             )}
+          </DialogHeader>
           {previewImageUrl && (
-            <img
-              src={previewImageUrl}
-              alt="Preview"
-              className="max-w-full max-h-[85vh] h-auto object-contain mx-auto"
-            />
+            <div className="flex-grow flex items-center justify-center overflow-hidden">
+              <img
+                src={previewImageUrl}
+                alt="Preview"
+                className="max-w-full max-h-full h-auto w-auto object-contain" // Ensure image fits within dialog
+              />
+            </div>
           )}
         </DialogContent>
       </Dialog>
