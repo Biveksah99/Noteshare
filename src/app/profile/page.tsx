@@ -34,14 +34,12 @@ const formSchema = z.object({
   }),
   email: z.string().email({ message: "Invalid email address." }).optional(),
   gender: z.string().optional(),
-  age: z.string().optional(), // Using string for simplicity, could be number
   contactNumber: z.string().optional(), // Renamed from phone for consistency
   address: z.string().optional(),
   section: z.string().optional(), // Represents Classroom
-  parents: z.string().optional(),
   bio: z.string().min(10, { // Kept bio for description, not in image
     message: "Bio must be at least 10 characters.",
-  }).optional(), // Make bio optional as it's not in the target UI
+  }).optional(), // Make bio optional as it's not in target UI
 })
 
 type FormValues = z.infer<typeof formSchema>;
@@ -125,11 +123,9 @@ const ProfilePage = () => {
       fullName: "Noah Trevor", // Example data matching the image
       email: "noah.t@yahoo.com",
       gender: "Male",
-      age: "21 Years",
       contactNumber: "08011985867453",
       address: "South Africa",
       section: "CIT (400 Level)",
-      parents: "Mrs Julie Trevor",
       bio: "Passionate about sharing knowledge and helping others learn.", // Keeping bio, though not in target UI
     },
   })
@@ -318,19 +314,6 @@ const ProfilePage = () => {
                       </FormItem>
                     )}
                   />
-                   <FormField
-                    control={form.control}
-                    name="age"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Age</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your Age" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                   <FormField
                     control={form.control}
                     name="contactNumber"
@@ -366,19 +349,6 @@ const ProfilePage = () => {
                         <FormLabel>Classroom</FormLabel>
                         <FormControl>
                           <Input placeholder="Your Section/Classroom" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                   <FormField
-                    control={form.control}
-                    name="parents"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Parents</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Parent's Name" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -447,7 +417,8 @@ const ProfilePage = () => {
           <ProfileDetail label="Full Name" value={currentValues.fullName} />
           <ProfileDetail label="Email" value={currentValues.email} />
           <ProfileDetail label="Gender" value={currentValues.gender} />
-          <ProfileDetail label="Age" value={currentValues.age} />
+          {/* Removed Age and Parents display */}
+          {/* <ProfileDetail label="Age" value={currentValues.age} /> */}
           <ProfileDetail label="Phone" value={currentValues.contactNumber} />
           <ProfileDetail label="Address" value={currentValues.address} />
           <Separator className="my-2"/> {/* Separator like in image */}
@@ -456,7 +427,7 @@ const ProfilePage = () => {
           <ProfileDetail label="Last Profile update" value="2 hours ago" />
           <ProfileDetail label="Last Login" value="1 hour ago" /> */}
           <ProfileDetail label="Classroom" value={currentValues.section} />
-          <ProfileDetail label="Parents" value={currentValues.parents} />
+          {/* <ProfileDetail label="Parents" value={currentValues.parents} /> */}
 
           {/* Optional Bio Display */}
           {currentValues.bio && (
@@ -516,3 +487,5 @@ const ProfilePage = () => {
 }
 
 export default ProfilePage
+
+    
