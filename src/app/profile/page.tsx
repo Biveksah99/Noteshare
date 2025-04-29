@@ -38,7 +38,7 @@ const formSchema = z.object({
   contactNumber: z.string().optional(), // Renamed from phone for consistency
   address: z.string().optional(),
   section: z.string().optional(), // Represents Classroom
-  bio: z.string().min(10, { // Kept bio for description, not in image
+  bio: z.string().min(10, { // Kept bio for description, not in target UI
     message: "Bio must be at least 10 characters.",
   }).optional(), // Make bio optional as it's not in target UI
 })
