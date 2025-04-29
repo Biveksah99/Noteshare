@@ -17,10 +17,10 @@ const ViewNotePage = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Extract parameters using React.use()
-  const noteId = React.use(searchParams?.get('id'));
-  const category = React.use(searchParams?.get('category'));
-  const fileIndexParam = React.use(searchParams?.get('fileIndex'));
+  // Extract parameters directly using searchParams.get()
+  const noteId = searchParams?.get('id');
+  const category = searchParams?.get('category');
+  const fileIndexParam = searchParams?.get('fileIndex');
 
   const [note, setNote] = useState<any>(null);
   const [currentFileIndex, setCurrentFileIndex] = useState<number>(0);
@@ -192,16 +192,7 @@ const ViewNotePage = () => {
                       >
                         <Expand className="h-5 w-5" />
                       </Button>
-                       {/* Download button for image (removed as it's now in the preview dialog) */}
-                       {/* <a
-                         href={file.url}
-                         download={fileName}
-                         className="absolute bottom-2 right-2 z-10"
-                       >
-                         <Button variant="secondary" size="icon" className="bg-black/50 text-white hover:bg-black/75" title="Download Image">
-                           <Download className="h-5 w-5" />
-                         </Button>
-                       </a> */}
+                       {/* Download button for image (moved to preview dialog) */}
                     </div>
                   ) : file.type && file.type === 'application/pdf' ? (
                      // PDF Display
