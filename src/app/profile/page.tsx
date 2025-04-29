@@ -420,16 +420,16 @@ const ProfilePage = () => {
         {/* Profile Picture */}
         <div className="mb-6"> {/* Add margin below the avatar */}
            <Label htmlFor="profile-image-upload" className="cursor-pointer relative group">
-              <Avatar className="h-32 w-32 border-2 border-muted p-1 neumorphic">
+              <Avatar className="h-40 w-40 border-2 border-muted p-1 neumorphic"> {/* Increased size */}
                  {/* Add placeholder if no image */}
                  <AvatarImage src={profileImage || undefined} alt={currentValues.fullName} />
                  <AvatarFallback className="bg-secondary">
-                    <UserIcon className="h-16 w-16 text-muted-foreground" />
+                    <UserIcon className="h-20 w-20 text-muted-foreground" /> {/* Increased icon size */}
                  </AvatarFallback>
               </Avatar>
                {/* Overlay for edit icon */}
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
-                    <Edit className="h-8 w-8 text-white" />
+                    <Edit className="h-10 w-10 text-white" /> {/* Increased edit icon size */}
                 </div>
               <Input
                 type="file"
@@ -516,5 +516,3 @@ const ProfilePage = () => {
 }
 
 export default ProfilePage
-
-    
