@@ -22,18 +22,19 @@ import { useRouter } from "next/navigation"
 import { useState, useRef, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { Edit, Check, Crop, User as UserIcon } from "lucide-react" // Added UserIcon
+import { Edit, Check, Crop, User as UserIcon } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import ReactCrop, { type Crop as CropType, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
-import { Separator } from "@/components/ui/separator" // Added Separator
+import { Separator } from "@/components/ui/separator"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select" // Import Select components
 
 const formSchema = z.object({
   fullName: z.string().min(2, {
     message: "Full Name must be at least 2 characters.",
   }),
   email: z.string().email({ message: "Invalid email address." }).optional(),
-  gender: z.string().optional(),
+  gender: z.enum(["Male", "Female", "Other"]).optional(), // Use enum for gender
   contactNumber: z.string().optional(), // Renamed from phone for consistency
   address: z.string().optional(),
   section: z.string().optional(), // Represents Classroom
@@ -119,6 +120,14 @@ const ProfilePage = () => {
   const aspect = 1; // For square profile picture
 
   const form = useForm<FormValues>({
+    resolver: async (data, context, options) => {
+      // Use Zod resolver
+      const result = formSchema.safeParse(data);
+      if (!result.success) {
+        return { values: {}, errors: result.error.flatten().fieldErrors };
+      }
+      return { values: result.data, errors: {} };
+    },
     defaultValues: {
       fullName: "Noah Trevor", // Example data matching the image
       email: "noah.t@yahoo.com",
@@ -307,9 +316,18 @@ const ProfilePage = () => {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Gender</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your Gender" {...field} />
-                        </FormControl>
+                         <Select onValueChange={field.onChange} defaultValue={field.value}>
+                           <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select your gender" />
+                              </SelectTrigger>
+                           </FormControl>
+                           <SelectContent>
+                             <SelectItem value="Male">Male</SelectItem>
+                             <SelectItem value="Female">Female</SelectItem>
+                             <SelectItem value="Other">Other</SelectItem>
+                           </SelectContent>
+                         </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -417,17 +435,10 @@ const ProfilePage = () => {
           <ProfileDetail label="Full Name" value={currentValues.fullName} />
           <ProfileDetail label="Email" value={currentValues.email} />
           <ProfileDetail label="Gender" value={currentValues.gender} />
-          {/* Removed Age and Parents display */}
-          {/* <ProfileDetail label="Age" value={currentValues.age} /> */}
           <ProfileDetail label="Phone" value={currentValues.contactNumber} />
           <ProfileDetail label="Address" value={currentValues.address} />
           <Separator className="my-2"/> {/* Separator like in image */}
-          {/* Add static or dynamic fields like Last Login, Created At etc. if needed */}
-          {/* <ProfileDetail label="Created At" value="2 hours ago" />
-          <ProfileDetail label="Last Profile update" value="2 hours ago" />
-          <ProfileDetail label="Last Login" value="1 hour ago" /> */}
           <ProfileDetail label="Classroom" value={currentValues.section} />
-          {/* <ProfileDetail label="Parents" value={currentValues.parents} /> */}
 
           {/* Optional Bio Display */}
           {currentValues.bio && (
