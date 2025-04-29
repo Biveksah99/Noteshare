@@ -14,7 +14,7 @@ import { Paperclip, Send, Image as ImageIcon, File as FileIcon } from 'lucide-re
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from "@/hooks/use-toast"; // Ensure useToast is imported
 
 interface Message {
     id: string;
@@ -40,6 +40,7 @@ const ChatPage = () => {
     const [uploading, setUploading] = useState(false);
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { toast } = useToast(); // Initialize toast
 
     const getChatId = useCallback((userId: string) => {
         // Ensure consistent chat ID regardless of who initiates
@@ -82,7 +83,7 @@ const ChatPage = () => {
 
             return () => unsubscribe(); // Cleanup listener on unmount
         }
-    }, [user, getChatId, scrollToBottom]);
+    }, [user, getChatId, scrollToBottom, toast]);
 
 
     const sendMessage = async () => {
