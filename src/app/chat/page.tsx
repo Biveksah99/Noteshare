@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { db, storage, auth } from '@/lib/firebase'; // Assuming you have firebase config here
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { useAuthState } from 'react-firebase-hooks/auth'; // Need to install react-firebase-hooks
+import { useAuthState } from 'react-firebase-hooks/auth'; // Correct import path for v5
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -20,14 +20,18 @@ interface Message {
     id: string;
     text?: string;
     senderId: string;
-    receiverId: string;
+    receiverId: string; // Should always be ADMIN_ID for user -> admin chats
     timestamp: Timestamp | null;
     fileUrl?: string;
     fileName?: string;
     fileType?: string; // e.g., 'image/png', 'application/pdf'
+    senderPhotoURL?: string | null; // Added sender photo URL
+    senderDisplayName?: string | null; // Added sender display name
 }
 
-const ADMIN_ID = "adminUserId"; // Replace with actual admin ID later
+const ADMIN_ID = "adminUserId"; // Replace with actual admin ID or fetch dynamically
+const ADMIN_PHOTO_URL = "https://picsum.photos/id/10/32/32"; // Placeholder Admin Avatar
+const ADMIN_DISPLAY_NAME = "Admin"; // Placeholder Admin Name
 
 const ChatPage = () => {
     const [messages, setMessages] = useState<Message[]>([]);
@@ -37,19 +41,25 @@ const ChatPage = () => {
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const getChatId = useCallback((userId: string) => {
+        // Ensure consistent chat ID regardless of who initiates
+        return userId < ADMIN_ID ? `${userId}_${ADMIN_ID}` : `${ADMIN_ID}_${userId}`;
+    }, []);
+
     const scrollToBottom = useCallback(() => {
-        if (scrollAreaRef.current) {
-             const scrollViewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-             if (scrollViewport) {
-                scrollViewport.scrollTop = scrollViewport.scrollHeight;
-             }
+        const scrollViewport = scrollAreaRef.current?.querySelector<HTMLDivElement>('[data-radix-scroll-area-viewport]');
+        if (scrollViewport) {
+           // Use requestAnimationFrame to ensure scrolling happens after layout updates
+           requestAnimationFrame(() => {
+               scrollViewport.scrollTop = scrollViewport.scrollHeight;
+           });
         }
     }, []);
 
 
     useEffect(() => {
         if (user) {
-            const chatId = user.uid < ADMIN_ID ? `${user.uid}_${ADMIN_ID}` : `${ADMIN_ID}_${user.uid}`;
+            const chatId = getChatId(user.uid);
             const messagesRef = collection(db, 'chats', chatId, 'messages');
             const q = query(messagesRef, orderBy('timestamp', 'asc'));
 
@@ -59,6 +69,8 @@ const ChatPage = () => {
                     ...doc.data()
                 } as Message));
                 setMessages(msgs);
+                 // Ensure scroll happens after messages state update
+                 setTimeout(scrollToBottom, 0);
             }, (error) => {
                 console.error("Error fetching messages: ", error);
                 toast({
@@ -70,26 +82,23 @@ const ChatPage = () => {
 
             return () => unsubscribe(); // Cleanup listener on unmount
         }
-    }, [user]);
-
-     // Scroll to bottom when messages change
-     useEffect(() => {
-        scrollToBottom();
-    }, [messages, scrollToBottom]);
+    }, [user, getChatId, scrollToBottom]);
 
 
     const sendMessage = async () => {
         if (!newMessage.trim() || !user) return;
 
-        const chatId = user.uid < ADMIN_ID ? `${user.uid}_${ADMIN_ID}` : `${ADMIN_ID}_${user.uid}`;
+        const chatId = getChatId(user.uid);
         const messagesRef = collection(db, 'chats', chatId, 'messages');
 
         try {
             await addDoc(messagesRef, {
                 text: newMessage,
                 senderId: user.uid,
-                receiverId: ADMIN_ID,
+                receiverId: ADMIN_ID, // Messages from user go to admin
                 timestamp: serverTimestamp(),
+                senderPhotoURL: user.photoURL,
+                senderDisplayName: user.displayName,
             });
             setNewMessage('');
             scrollToBottom(); // Scroll after sending
@@ -108,8 +117,9 @@ const ChatPage = () => {
         if (!file || !user) return;
 
         setUploading(true);
-        const chatId = user.uid < ADMIN_ID ? `${user.uid}_${ADMIN_ID}` : `${ADMIN_ID}_${user.uid}`;
-        const filePath = `chats/${chatId}/${Date.now()}_${file.name}`;
+        const chatId = getChatId(user.uid);
+        // Store files in a user-specific path within the chat
+        const filePath = `chats/${chatId}/${user.uid}/${Date.now()}_${file.name}`;
         const storageRef = ref(storage, filePath);
 
         try {
@@ -121,11 +131,13 @@ const ChatPage = () => {
             const messagesRef = collection(db, 'chats', chatId, 'messages');
              await addDoc(messagesRef, {
                 senderId: user.uid,
-                receiverId: ADMIN_ID,
+                receiverId: ADMIN_ID, // Files from user go to admin
                 timestamp: serverTimestamp(),
                 fileUrl: downloadURL,
                 fileName: file.name,
                 fileType: file.type,
+                senderPhotoURL: user.photoURL,
+                senderDisplayName: user.displayName,
             });
             scrollToBottom(); // Scroll after sending file
         } catch (error) {
@@ -152,7 +164,7 @@ const ChatPage = () => {
         // Optionally, show a loading state or a prompt to log in
         return (
             <div className="container mx-auto p-6 flex justify-center items-center h-[calc(100vh-10rem)]">
-                 <Card className="w-full max-w-md">
+                 <Card className="w-full max-w-md neumorphic">
                     <CardHeader>
                         <CardTitle>Chat</CardTitle>
                     </CardHeader>
@@ -170,14 +182,18 @@ const ChatPage = () => {
 
 
     return (
-        <div className="container mx-auto p-4 flex flex-col h-[calc(100vh-8rem)] bg-secondary/30 rounded-lg shadow-md">
+        <div className="container mx-auto p-4 flex flex-col h-[calc(100vh-8rem)] bg-secondary/30 rounded-lg shadow-md neumorphic">
             {/* Chat Header */}
-             <div className="border-b p-4 bg-secondary rounded-t-lg">
-                <h1 className="text-xl font-semibold text-secondary-foreground">Chat with Admin</h1>
+             <div className="border-b p-4 bg-secondary rounded-t-lg flex items-center">
+                <Avatar className="h-8 w-8 mr-3">
+                   <AvatarImage src={ADMIN_PHOTO_URL} />
+                   <AvatarFallback>{ADMIN_DISPLAY_NAME.substring(0,1)}</AvatarFallback>
+                </Avatar>
+                <h1 className="text-xl font-semibold text-secondary-foreground">{ADMIN_DISPLAY_NAME}</h1>
             </div>
 
             {/* Messages Area */}
-            <ScrollArea ref={scrollAreaRef} className="flex-grow p-4 space-y-4 bg-background">
+            <ScrollArea ref={scrollAreaRef} className="flex-grow p-4 space-y-4 bg-background/50">
                  {messages.map((msg) => (
                     <div
                         key={msg.id}
@@ -186,26 +202,28 @@ const ChatPage = () => {
                         <div
                             className={`flex items-end max-w-xs md:max-w-md lg:max-w-lg ${msg.senderId === user.uid ? 'flex-row-reverse' : ''}`}
                         >
-                            <Avatar className={`h-6 w-6 mx-2 ${msg.senderId === user.uid ? 'ml-2' : 'mr-2'}`}>
-                                 {/* Placeholder avatar - replace with actual user/admin avatars */}
-                                <AvatarImage src={msg.senderId === user.uid ? user.photoURL || undefined : "https://picsum.photos/id/10/32/32"} />
-                                <AvatarFallback>{msg.senderId === user.uid ? user.displayName?.substring(0, 1) || 'U' : 'A'}</AvatarFallback>
-                            </Avatar>
+                            {/* Avatar shown only for received messages */}
+                             {msg.senderId !== user.uid && (
+                                <Avatar className={`h-6 w-6 mx-2 self-end`}>
+                                    <AvatarImage src={msg.senderPhotoURL || ADMIN_PHOTO_URL} />
+                                    <AvatarFallback>{msg.senderDisplayName ? msg.senderDisplayName.substring(0, 1) : 'A'}</AvatarFallback>
+                                </Avatar>
+                             )}
                             <div
                                 className={`rounded-lg p-3 shadow ${
                                     msg.senderId === user.uid
-                                        ? 'bg-primary text-primary-foreground'
-                                        : 'bg-muted text-foreground'
+                                        ? 'bg-primary text-primary-foreground ml-8' // Add margin for own messages to align opposite avatar
+                                        : 'bg-muted text-foreground mr-8' // Add margin for received messages
                                 }`}
                              >
                                 {msg.text && <p className="text-sm break-words">{msg.text}</p>}
                                 {msg.fileUrl && (
                                     msg.fileType?.startsWith('image/') ? (
-                                        <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer">
+                                        <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="block mt-2">
                                             <img
                                                 src={msg.fileUrl}
                                                 alt={msg.fileName || 'Uploaded image'}
-                                                className="max-w-full h-auto rounded mt-2 max-h-60 cursor-pointer"
+                                                className="max-w-full h-auto rounded max-h-60 cursor-pointer border"
                                             />
                                          </a>
                                     ) : (
@@ -214,7 +232,7 @@ const ChatPage = () => {
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             download={msg.fileName}
-                                            className="mt-2 flex items-center text-sm underline"
+                                            className="mt-2 flex items-center text-sm underline hover:text-primary"
                                         >
                                             <FileIcon className="h-4 w-4 mr-1" />
                                             {msg.fileName || 'Download File'}
@@ -260,3 +278,4 @@ const ChatPage = () => {
 };
 
 export default ChatPage;
+
