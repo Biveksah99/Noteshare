@@ -29,17 +29,20 @@ import 'react-image-crop/dist/ReactCrop.css'
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select" // Import Select components
 
+// ~60 words * 5 chars/word = 300 characters
+const BIO_MAX_LENGTH = 300;
+
 const formSchema = z.object({
   fullName: z.string().min(2, {
     message: "Full Name must be at least 2 characters.",
   }),
-  email: z.string().email({ message: "Invalid email address." }).optional(),
+  email: z.string().email({ message: "Invalid email address." }).optional(), // Added email validation
   gender: z.enum(["Male", "Female", "Other"]).optional(), // Use enum for gender
   contactNumber: z.string().optional(), // Renamed from phone for consistency
   address: z.string().optional(),
   section: z.string().optional(), // Represents Classroom
-  bio: z.string().min(10, { // Kept bio for description, not in target UI
-    message: "Bio must be at least 10 characters.",
+  bio: z.string().max(BIO_MAX_LENGTH, { // Updated bio validation to max characters
+    message: `Bio must be at most ${BIO_MAX_LENGTH} characters (approx. 60 words).`,
   }).optional(), // Make bio optional as it's not in target UI
 })
 
@@ -372,7 +375,7 @@ const ProfilePage = () => {
                       </FormItem>
                     )}
                   />
-                   {/* Bio field (optional, can be removed if not needed) */}
+                   {/* Bio field */}
                    <FormField
                     control={form.control}
                     name="bio"
@@ -384,8 +387,12 @@ const ProfilePage = () => {
                             placeholder="Write a short bio about yourself."
                             className="resize-none"
                             {...field}
+                            maxLength={BIO_MAX_LENGTH} // Enforce in textarea as well
                           />
                         </FormControl>
+                         <FormDescription>
+                           {`${field.value?.length || 0}/${BIO_MAX_LENGTH} characters`}
+                         </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -498,5 +505,3 @@ const ProfilePage = () => {
 }
 
 export default ProfilePage
-
-    
