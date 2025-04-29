@@ -5,7 +5,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { db, storage, auth } from '@/lib/firebase'; // Assuming you have firebase config here
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { useAuthState } from 'react-firebase-hooks/auth'; // Correct import path for v5
+// Try importing directly from the main package if subpath fails
+import { useAuthState } from 'react-firebase-hooks'; // Correct import path for v5
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -279,4 +280,3 @@ const ChatPage = () => {
 };
 
 export default ChatPage;
-
