@@ -260,7 +260,7 @@ const ProfilePage = () => {
 
   return (
     <div className="container mx-auto p-6">
-       <div className="flex justify-between items-center border-b pb-2 mb-4">
+       <div className="flex justify-between items-center border-b pb-2 mb-6"> {/* Increased margin-bottom */}
           <h1 className="text-2xl font-semibold">Viewing {currentValues.fullName}'s profile</h1>
           <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
             <DialogTrigger asChild>
@@ -415,11 +415,11 @@ const ProfilePage = () => {
           </Dialog>
        </div>
 
-      <div className="flex flex-col md:flex-row gap-6">
-
-        {/* Left Column: Profile Picture */}
-        <div className="flex flex-col items-center md:w-1/4">
-           <Label htmlFor="profile-image-upload" className="cursor-pointer mb-4 relative group">
+      {/* Center the profile image and details vertically */}
+      <div className="flex flex-col items-center">
+        {/* Profile Picture */}
+        <div className="mb-6"> {/* Add margin below the avatar */}
+           <Label htmlFor="profile-image-upload" className="cursor-pointer relative group">
               <Avatar className="h-32 w-32 border-2 border-muted p-1 neumorphic">
                  {/* Add placeholder if no image */}
                  <AvatarImage src={profileImage || undefined} alt={currentValues.fullName} />
@@ -442,8 +442,8 @@ const ProfilePage = () => {
            </Label>
         </div>
 
-        {/* Right Column: Profile Details */}
-        <div className="md:w-3/4 border rounded-md p-4 neumorphic bg-card">
+        {/* Profile Details */}
+        <div className="w-full md:w-3/4 border rounded-md p-4 neumorphic bg-card">
           <ProfileDetail label="Full Name" value={currentValues.fullName} />
           <ProfileDetail label="Email" value={currentValues.email} />
           <ProfileDetail label="Gender" value={currentValues.gender} />
@@ -516,3 +516,5 @@ const ProfilePage = () => {
 }
 
 export default ProfilePage
+
+    
