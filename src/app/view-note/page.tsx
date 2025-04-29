@@ -11,19 +11,22 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import Link from "next/link"; // Import Link
 
+const DESCRIPTION_CHAR_LIMIT = 150; // Define the character limit for the description preview
+
 const ViewNotePage = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
 
   // Extract parameters using React.use()
-  const noteId = React.useMemo(() => searchParams.get('id'), [searchParams]);
-  const category = React.useMemo(() => searchParams.get('category'), [searchParams]);
-  const fileIndexParam = React.useMemo(() => searchParams.get('fileIndex'), [searchParams]);
+  const noteId = React.use(searchParams?.get('id'));
+  const category = React.use(searchParams?.get('category'));
+  const fileIndexParam = React.use(searchParams?.get('fileIndex'));
 
   const [note, setNote] = useState<any>(null);
   const [currentFileIndex, setCurrentFileIndex] = useState<number>(0);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false); // State for description expansion
 
   useEffect(() => {
     if (category && noteId) {
@@ -118,6 +121,13 @@ const ViewNotePage = () => {
   const fileExtension = file ? getFileExtension(file.type) : 'bin'; // Use '.bin' for unknown binary
   const fileName = `${baseFileName}_${currentFileIndex + 1}.${fileExtension}`;
 
+  const description = note.description || 'No description provided.';
+  const isLongDescription = description.length > DESCRIPTION_CHAR_LIMIT;
+  const displayDescription = isDescriptionExpanded || !isLongDescription
+    ? description
+    : `${description.substring(0, DESCRIPTION_CHAR_LIMIT)}...`;
+
+
   return (
     <div className="container mx-auto p-6">
       <Card className="mb-4 neumorphic">
@@ -136,7 +146,27 @@ const ViewNotePage = () => {
         </CardHeader>
         <CardContent>
           {/* Use whitespace-pre-wrap to respect newlines and spacing in description */}
-          <CardDescription className="mb-4 whitespace-pre-wrap">{note.description || 'No description provided.'}</CardDescription>
+          <CardDescription className="mb-4 whitespace-pre-wrap">
+            {displayDescription}
+            {isLongDescription && !isDescriptionExpanded && (
+              <Button
+                variant="link"
+                className="p-0 h-auto ml-1 text-accent font-semibold"
+                onClick={() => setIsDescriptionExpanded(true)}
+              >
+                See more
+              </Button>
+            )}
+             {isLongDescription && isDescriptionExpanded && (
+              <Button
+                variant="link"
+                className="p-0 h-auto ml-1 text-accent font-semibold"
+                onClick={() => setIsDescriptionExpanded(false)}
+              >
+                See less
+              </Button>
+            )}
+          </CardDescription>
 
           {/* File Display Area */}
           {note.files && note.files.length > 0 ? (
@@ -162,8 +192,8 @@ const ViewNotePage = () => {
                       >
                         <Expand className="h-5 w-5" />
                       </Button>
-                       {/* Download button for image */}
-                       <a
+                       {/* Download button for image (removed as it's now in the preview dialog) */}
+                       {/* <a
                          href={file.url}
                          download={fileName}
                          className="absolute bottom-2 right-2 z-10"
@@ -171,7 +201,7 @@ const ViewNotePage = () => {
                          <Button variant="secondary" size="icon" className="bg-black/50 text-white hover:bg-black/75" title="Download Image">
                            <Download className="h-5 w-5" />
                          </Button>
-                       </a>
+                       </a> */}
                     </div>
                   ) : file.type && file.type === 'application/pdf' ? (
                      // PDF Display
@@ -224,7 +254,7 @@ const ViewNotePage = () => {
                   <Button onClick={handlePrevClick} variant="outline" size="icon" className="neumorphic" aria-label="Previous File">
                     <ChevronLeft/>
                   </Button>
-                  <span className="text-sm text-muted-foregroundtabular-nums">{currentFileIndex + 1} / {note.files.length}</span>
+                  <span className="text-sm text-muted-foreground tabular-nums">{currentFileIndex + 1} / {note.files.length}</span>
                   <Button onClick={handleNextClick} variant="outline" size="icon" className="neumorphic" aria-label="Next File">
                     <ChevronRight/>
                   </Button>
