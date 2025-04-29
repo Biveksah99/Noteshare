@@ -146,7 +146,8 @@ const ViewNotePage = () => {
         </CardHeader>
         <CardContent>
           {/* Use whitespace-pre-wrap to respect newlines and spacing in description */}
-          <CardDescription className="mb-4 whitespace-pre-wrap">
+          {/* Apply serif font for a different style */}
+          <CardDescription className="mb-4 whitespace-pre-wrap font-serif text-base">
             {displayDescription}
             {isLongDescription && !isDescriptionExpanded && (
               <Button
