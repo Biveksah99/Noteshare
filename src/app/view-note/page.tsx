@@ -43,6 +43,7 @@ const ViewNotePage = () => {
           }
         } catch (error) {
           console.error("Error parsing stored notes:", error);
+           router.push(`/category/${category}`); // Redirect on error
         }
       } else {
         router.push(`/category/${category}`);
@@ -85,11 +86,12 @@ const ViewNotePage = () => {
   };
 
   if (!note) {
-    return <div className="container mx-auto p-6 text-center">Loading...</div>;
+    return <div className="container mx-auto p-6 text-center">Loading note...</div>;
   }
 
-  const file = note.files?.[currentFileIndex];
-  const fileName = `${note.title}_${currentFileIndex + 1}.${getFileExtension(file?.type)}`;
+  // Ensure note.files exists and has items before accessing
+  const file = note.files && note.files.length > currentFileIndex ? note.files[currentFileIndex] : null;
+  const fileName = file ? `${note.title}_${currentFileIndex + 1}.${getFileExtension(file.type)}` : `${note.title}_${currentFileIndex + 1}.file`;
 
   return (
     <div className="container mx-auto p-6">
@@ -109,60 +111,81 @@ const ViewNotePage = () => {
         </CardHeader>
         <CardContent>
           <CardDescription className="mb-4 whitespace-pre-wrap">{note.description}</CardDescription>
-          {note.files && note.files.length > 0 && (
+
+          {note.files && note.files.length > 0 ? (
             <div className="mb-4 relative">
-              {file && file.type && file.type.startsWith('image/') && (
-                <div className="flex justify-center items-center relative group bg-muted rounded-md overflow-hidden">
-                  <img
-                    src={file.url}
-                    alt={`${note.title} - File ${currentFileIndex + 1}`}
-                    className="max-w-full max-h-[60vh] h-auto object-contain cursor-pointer"
-                    onClick={() => handlePreviewClick(file.url)} // Open preview on image click too
-                  />
-                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-2 right-2 bg-black/50 text-white hover:bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => handlePreviewClick(file.url)}
-                    title="Expand Image"
-                  >
-                    <Expand className="h-5 w-5" />
-                  </Button>
-                </div>
-              )}
-              {file && file.type && file.type === 'application/pdf' && (
-                <div className="flex justify-center relative">
-                  <embed
-                    src={file.url}
-                    type="application/pdf"
-                    className="w-full h-[70vh] rounded-md shadow-md"
-                  />
-                 {/* Add download button for PDF */}
-                  <a
-                    href={file.url}
-                    download={fileName}
-                    className="absolute top-2 right-2"
-                  >
-                     <Button variant="ghost" size="icon" className="bg-black/50 text-white hover:bg-black/75" title="Download PDF">
-                        <Download className="h-5 w-5" />
-                    </Button>
-                  </a>
-                </div>
-              )}
-              {file && file.type && !file.type.startsWith('image/') && file.type !== 'application/pdf' && (
+              {file ? ( // Check if file exists at the current index
+                <>
+                  {file.type && file.type.startsWith('image/') ? (
+                    <div className="flex justify-center items-center relative group bg-muted rounded-md overflow-hidden">
+                      <img
+                        src={file.url}
+                        alt={`${note.title} - File ${currentFileIndex + 1}`}
+                        className="max-w-full max-h-[60vh] h-auto object-contain cursor-pointer"
+                        onClick={() => handlePreviewClick(file.url)} // Open preview on image click too
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 bg-black/50 text-white hover:bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handlePreviewClick(file.url)}
+                        title="Expand Image"
+                      >
+                        <Expand className="h-5 w-5" />
+                      </Button>
+                    </div>
+                  ) : file.type && file.type === 'application/pdf' ? (
+                    <div className="flex justify-center relative">
+                      <embed
+                        src={file.url}
+                        type="application/pdf"
+                        className="w-full h-[70vh] rounded-md shadow-md"
+                      />
+                      <a
+                        href={file.url}
+                        download={fileName}
+                        className="absolute top-2 right-2"
+                      >
+                        <Button variant="ghost" size="icon" className="bg-black/50 text-white hover:bg-black/75" title="Download PDF">
+                          <Download className="h-5 w-5" />
+                        </Button>
+                      </a>
+                    </div>
+                  ) : file.type ? ( // Other known file types
+                    <div className="flex flex-col items-center justify-center p-4 border rounded-md">
+                      <p className="mb-2 text-muted-foreground">Unsupported file type for inline preview ({file.type}).</p>
+                      <a
+                        href={file.url}
+                        download={fileName}
+                        className="underline text-primary inline-flex items-center gap-1"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Download className="h-4 w-4" /> Download File
+                      </a>
+                    </div>
+                  ) : ( // File exists but type is missing or unknown
+                     <div className="flex flex-col items-center justify-center p-4 border rounded-md">
+                        <p className="mb-2 text-muted-foreground">Cannot determine file type for preview.</p>
+                        <a
+                            href={file.url} // Still allow download attempt
+                            download={fileName}
+                            className="underline text-primary inline-flex items-center gap-1"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Download className="h-4 w-4" /> Download File
+                          </a>
+                     </div>
+                  )}
+                </>
+              ) : (
                 <div className="flex flex-col items-center justify-center p-4 border rounded-md">
-                   <p className="mb-2 text-muted-foreground">Unsupported file type for inline preview.</p>
-                  <a
-                    href={file.url}
-                    download={fileName}
-                    className="underline text-primary inline-flex items-center gap-1"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Download className="h-4 w-4" /> Download File
-                  </a>
+                  <p className="text-muted-foreground">File preview not available.</p>
                 </div>
               )}
+
+              {/* Navigation buttons - only show if there are multiple files */}
               {note.files.length > 1 && (
                 <div className="flex justify-between items-center mt-4">
                   <Button onClick={handlePrevClick} variant="outline" size="icon" className="neumorphic">
@@ -175,6 +198,8 @@ const ViewNotePage = () => {
                 </div>
               )}
             </div>
+          ) : (
+             <p className="text-muted-foreground">No files attached to this note.</p>
           )}
         </CardContent>
       </Card>
@@ -205,7 +230,7 @@ const ViewNotePage = () => {
            {previewImageUrl && (
                 <a
                     href={previewImageUrl}
-                    download={fileName}
+                    download={fileName} // Use the derived filename
                     className="absolute bottom-4 right-4 z-20" // Positioned bottom right
                  >
                     <Button variant="default" size="icon" className="bg-primary/80 text-primary-foreground hover:bg-primary" title="Download Image">
@@ -220,4 +245,3 @@ const ViewNotePage = () => {
 };
 
 export default ViewNotePage;
-
