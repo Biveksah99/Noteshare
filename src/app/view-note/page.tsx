@@ -5,7 +5,9 @@ import {useRouter, useSearchParams} from 'next/navigation';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 import {format} from 'date-fns';
-import {ChevronLeft, ChevronRight} from "lucide-react";
+import {ChevronLeft, ChevronRight, Expand} from "lucide-react";
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 
 const ViewNotePage = () => {
   const searchParams = useSearchParams();
@@ -18,6 +20,8 @@ const ViewNotePage = () => {
 
   const [note, setNote] = useState<any>(null);
   const [currentFileIndex, setCurrentFileIndex] = useState<number>(0);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (category && noteId) {
@@ -28,9 +32,9 @@ const ViewNotePage = () => {
           const foundNote = notes.find((n: any) => n.id === parseInt(noteId as string));
           if (foundNote) {
             setNote(foundNote);
-            if (fileIndexParam) {
-              setCurrentFileIndex(parseInt(fileIndexParam, 10));
-            }
+            const initialFileIndex = fileIndexParam ? parseInt(fileIndexParam, 10) : 0;
+             // Ensure the index is within bounds
+            setCurrentFileIndex(Math.max(0, Math.min(initialFileIndex, foundNote.files.length - 1)));
           } else {
             router.push(`/category/${category}`);
           }
@@ -46,18 +50,23 @@ const ViewNotePage = () => {
   }, [category, noteId, router, fileIndexParam]);
 
   const handlePrevClick = () => {
-    setCurrentFileIndex((prevIndex) => (prevIndex > 0 ? prevIndex - 1 : note.files.length - 1));
+    setCurrentFileIndex((prevIndex) => (prevIndex > 0 ? prevIndex - 1 : (note?.files?.length || 1) - 1));
   };
 
   const handleNextClick = () => {
-    setCurrentFileIndex((prevIndex) => (prevIndex < note.files.length - 1 ? prevIndex + 1 : 0));
+    setCurrentFileIndex((prevIndex) => (prevIndex < (note?.files?.length || 1) - 1 ? prevIndex + 1 : 0));
+  };
+
+  const handlePreviewClick = (imageUrl: string) => {
+    setPreviewImageUrl(imageUrl);
+    setIsPreviewOpen(true);
   };
 
   if (!note) {
-    return <div>Loading...</div>;
+    return <div className="container mx-auto p-6 text-center">Loading...</div>;
   }
 
-  const file = note.files[currentFileIndex];
+  const file = note.files?.[currentFileIndex];
 
   return (
     <div className="container mx-auto p-6">
@@ -75,16 +84,24 @@ const ViewNotePage = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <CardDescription className="mb-4">{note.description}</CardDescription>
+          <CardDescription className="mb-4 whitespace-pre-wrap">{note.description}</CardDescription>
           {note.files && note.files.length > 0 && (
-            <div className="mb-4">
+            <div className="mb-4 relative">
               {file && file.type && file.type.startsWith('image/') && (
-                <div className="flex justify-center">
+                <div className="flex justify-center items-center relative">
                   <img
                     src={file.url}
-                    alt={note.title}
-                    className="max-w-full h-auto rounded-md shadow-md"
+                    alt={note.title + ` - ${currentFileIndex + 1}`}
+                    className="max-w-full max-h-[60vh] h-auto rounded-md shadow-md object-contain"
                   />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 bg-black/50 text-white hover:bg-black/75"
+                    onClick={() => handlePreviewClick(file.url)}
+                  >
+                    <Expand className="h-5 w-5" />
+                  </Button>
                 </div>
               )}
               {file && file.type && file.type === 'application/pdf' && (
@@ -92,16 +109,17 @@ const ViewNotePage = () => {
                   <embed
                     src={file.url}
                     type="application/pdf"
-                    className="w-full h-[500px] rounded-md shadow-md"
+                    className="w-full h-[70vh] rounded-md shadow-md"
                   />
                 </div>
               )}
               {file && file.type && !file.type.startsWith('image/') && file.type !== 'application/pdf' && (
-                <div className="flex justify-center">
+                <div className="flex flex-col items-center justify-center p-4 border rounded-md">
+                   <p className="mb-2 text-muted-foreground">Unsupported file type for inline preview.</p>
                   <a
                     href={file.url}
-                    download={`${note.title}`}
-                    className="underline text-blue-500"
+                    download={`${note.title}_${currentFileIndex+1}`} // Add index to filename
+                    className="underline text-primary"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -110,20 +128,33 @@ const ViewNotePage = () => {
                 </div>
               )}
               {note.files.length > 1 && (
-                <div className="flex justify-between mt-2">
-                  <button onClick={handlePrevClick} className="p-2 rounded-full hover:bg-gray-200">
+                <div className="flex justify-between items-center mt-4">
+                  <Button onClick={handlePrevClick} variant="outline" size="icon" className="neumorphic">
                     <ChevronLeft/>
-                  </button>
-                  <span>{currentFileIndex + 1} / {note.files.length}</span>
-                  <button onClick={handleNextClick} className="p-2 rounded-full hover:bg-gray-200">
+                  </Button>
+                  <span className="text-sm text-muted-foreground">{currentFileIndex + 1} / {note.files.length}</span>
+                  <Button onClick={handleNextClick} variant="outline" size="icon" className="neumorphic">
                     <ChevronRight/>
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
           )}
         </CardContent>
       </Card>
+
+       {/* Image Preview Dialog */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="max-w-4xl p-2">
+          {previewImageUrl && (
+            <img
+              src={previewImageUrl}
+              alt="Preview"
+              className="max-w-full max-h-[85vh] h-auto object-contain mx-auto"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
