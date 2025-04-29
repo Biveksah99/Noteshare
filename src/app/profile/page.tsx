@@ -1,3 +1,4 @@
+
 "use client"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -21,21 +22,29 @@ import { useRouter } from "next/navigation"
 import { useState, useRef, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { Edit, Check, Crop } from "lucide-react"
+import { Edit, Check, Crop, User as UserIcon } from "lucide-react" // Added UserIcon
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import ReactCrop, { type Crop as CropType, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
+import { Separator } from "@/components/ui/separator" // Added Separator
 
 const formSchema = z.object({
   fullName: z.string().min(2, {
     message: "Full Name must be at least 2 characters.",
   }),
-  section: z.string().optional(),
-  contactNumber: z.string().optional(),
-  bio: z.string().min(10, {
+  email: z.string().email({ message: "Invalid email address." }).optional(),
+  gender: z.string().optional(),
+  age: z.string().optional(), // Using string for simplicity, could be number
+  contactNumber: z.string().optional(), // Renamed from phone for consistency
+  address: z.string().optional(),
+  section: z.string().optional(), // Represents Classroom
+  parents: z.string().optional(),
+  bio: z.string().min(10, { // Kept bio for description, not in image
     message: "Bio must be at least 10 characters.",
-  }),
+  }).optional(), // Make bio optional as it's not in the target UI
 })
+
+type FormValues = z.infer<typeof formSchema>;
 
 // Helper function to generate cropped image
 function getCroppedImg(image: HTMLImageElement, crop: PixelCrop, fileName: string): Promise<string> {
@@ -87,31 +96,81 @@ function getCroppedImg(image: HTMLImageElement, crop: PixelCrop, fileName: strin
   });
 }
 
+// Simple component to display profile details
+const ProfileDetail = ({ label, value }: { label: string, value?: string }) => (
+  value ? (
+    <div className="flex justify-between py-1">
+      <span className="font-semibold text-sm">{label}</span>
+      <span className="text-sm text-muted-foreground">{value}</span>
+    </div>
+  ) : null
+);
+
+
 const ProfilePage = () => {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const [openEditDialog, setOpenEditDialog] = useState(false)
-  const [profileImage, setProfileImage] = useState<string | null>("https://picsum.photos/id/237/200/300");
+  const [profileImage, setProfileImage] = useState<string | null>("https://picsum.photos/id/237/200/300"); // Default image
   const [isCropDialogOpen, setIsCropDialogOpen] = useState(false);
   const [newProfileImageSrc, setNewProfileImageSrc] = useState<string | null>(null); // Source for cropper
   const [crop, setCrop] = useState<CropType>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const imgRef = useRef<HTMLImageElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null); // Ref for file input
   const aspect = 1; // For square profile picture
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     defaultValues: {
-      fullName: "John Doe",
-      section: "A",
-      contactNumber: "123-456-7890",
-      bio: "Passionate about sharing knowledge and helping others learn.",
+      fullName: "Noah Trevor", // Example data matching the image
+      email: "noah.t@yahoo.com",
+      gender: "Male",
+      age: "21 Years",
+      contactNumber: "08011985867453",
+      address: "South Africa",
+      section: "CIT (400 Level)",
+      parents: "Mrs Julie Trevor",
+      bio: "Passionate about sharing knowledge and helping others learn.", // Keeping bio, though not in target UI
     },
   })
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  // Load profile data from localStorage on mount
+  useEffect(() => {
+    const savedProfile = localStorage.getItem('userProfile');
+    if (savedProfile) {
+      try {
+        const profileData = JSON.parse(savedProfile);
+        form.reset(profileData); // Update form with saved data
+        if (profileData.profileImage) {
+            setProfileImage(profileData.profileImage);
+        }
+      } catch (error) {
+        console.error("Failed to parse profile data from localStorage", error);
+      }
+    }
+  }, [form]);
+
+
+  async function onSubmit(values: FormValues) {
     setIsLoading(true)
-    // Simulate a delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    console.log("Updating profile with:", values); // Log values being saved
+     // Simulate a delay
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // Save profile data (including the potentially updated image URL) to localStorage
+    try {
+      const profileToSave = { ...values, profileImage };
+      localStorage.setItem('userProfile', JSON.stringify(profileToSave));
+      console.log("Profile saved to localStorage:", profileToSave);
+    } catch (error) {
+      console.error("Failed to save profile data to localStorage", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save profile locally.",
+      })
+    }
+
     setIsLoading(false)
     toast({
       title: "Success!",
@@ -126,15 +185,20 @@ const ProfilePage = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setNewProfileImageSrc(reader.result as string);
-        setIsCropDialogOpen(true); // Open crop dialog instead of confirmation
-        // Reset the input value so the same file can be selected again
+        setIsCropDialogOpen(true); // Open crop dialog
         if (event.target) {
-          event.target.value = "";
+          event.target.value = ""; // Reset input value
         }
       };
       reader.readAsDataURL(file);
     }
   };
+
+   // Trigger file input click when Avatar is clicked
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
 
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     const { width, height } = e.currentTarget;
@@ -161,7 +225,12 @@ const ProfilePage = () => {
           completedCrop,
           'profile.png' // You might want a dynamic name
         );
-        setProfileImage(croppedImageUrl);
+        setProfileImage(croppedImageUrl); // Update profile image state
+        // Immediately save the updated image URL with the rest of the profile data
+        const currentValues = form.getValues();
+        const profileToSave = { ...currentValues, profileImage: croppedImageUrl };
+        localStorage.setItem('userProfile', JSON.stringify(profileToSave));
+
         setIsCropDialogOpen(false);
         setNewProfileImageSrc(null); // Clear the source image
         setCrop(undefined); // Reset crop state
@@ -187,21 +256,19 @@ const ProfilePage = () => {
     }
   };
 
+  const currentValues = form.getValues(); // Get current form values for display
+
   return (
-    <div className="flex justify-center items-center min-h-screen bg-background p-4">
-      <Card className="w-full max-w-[500px] bg-card text-card-foreground shadow-lg">
-        <CardHeader className="flex flex-row justify-between items-center">
-          <div>
-            <CardTitle className="text-2xl font-semibold">Your Profile</CardTitle>
-            <CardDescription>Manage your profile information.</CardDescription>
-          </div>
+    <div className="container mx-auto p-6">
+       <div className="flex justify-between items-center border-b pb-2 mb-4">
+          <h1 className="text-2xl font-semibold">Viewing {currentValues.fullName}'s profile</h1>
           <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Edit className="h-5 w-5" />
+              <Button variant="outline" size="sm">
+                 <Edit className="mr-2 h-4 w-4" /> Edit Profile
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[480px]"> {/* Slightly wider dialog */}
               <DialogHeader>
                 <DialogTitle>Edit Profile</DialogTitle>
                 <DialogDescription>
@@ -209,7 +276,9 @@ const ProfilePage = () => {
                 </DialogDescription>
               </DialogHeader>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                 {/* Form needs to be inside DialogContent but outside DialogFooter if using default footer */}
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                  {/* Form Fields */}
                   <FormField
                     control={form.control}
                     name="fullName"
@@ -219,25 +288,45 @@ const ProfilePage = () => {
                         <FormControl>
                           <Input placeholder="Your Full Name" {...field} />
                         </FormControl>
-                        <FormDescription>
-                          This is how your name will appear on shared notes.
-                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="Your Email" {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                   <FormField
                     control={form.control}
-                    name="section"
+                    name="gender"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Section</FormLabel>
+                        <FormLabel>Gender</FormLabel>
                         <FormControl>
-                          <Input placeholder="Your Section (e.g., A, B)" {...field} />
+                          <Input placeholder="Your Gender" {...field} />
                         </FormControl>
-                        <FormDescription>
-                          Specify your class section.
-                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <FormField
+                    control={form.control}
+                    name="age"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Age</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your Age" {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -247,18 +336,56 @@ const ProfilePage = () => {
                     name="contactNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Contact Number</FormLabel>
+                        <FormLabel>Phone</FormLabel>
                         <FormControl>
                           <Input placeholder="Your Contact Number" {...field} />
                         </FormControl>
-                        <FormDescription>
-                          Enter your contact number.
-                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                   <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your Address" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   {/* "Section" maps to "Classroom" */}
                   <FormField
+                    control={form.control}
+                    name="section"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Classroom</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your Section/Classroom" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <FormField
+                    control={form.control}
+                    name="parents"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Parents</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Parent's Name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   {/* Bio field (optional, can be removed if not needed) */}
+                   <FormField
                     control={form.control}
                     name="bio"
                     render={({ field }) => (
@@ -271,54 +398,79 @@ const ProfilePage = () => {
                             {...field}
                           />
                         </FormControl>
-                        <FormDescription>
-                          Briefly describe yourself and your interests.
-                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <DialogFooter>
-                    <Button type="submit" className={cn("ml-auto bg-accent text-accent-foreground", isLoading && "cursor-not-allowed opacity-50")} disabled={isLoading}>
-                      {isLoading ? "Updating..." : "Update Profile"}
-                    </Button>
-                  </DialogFooter>
+                   {/* Submit button needs to be outside the scrollable form area but inside the DialogFooter */}
+                   <DialogFooter>
+                      <Button type="submit" className={cn("ml-auto bg-accent text-accent-foreground", isLoading && "cursor-not-allowed opacity-50")} disabled={isLoading}>
+                        {isLoading ? "Updating..." : "Update Profile"}
+                      </Button>
+                   </DialogFooter>
                 </form>
               </Form>
+
             </DialogContent>
           </Dialog>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center space-x-4 mb-4">
-            <Label htmlFor="profile-image-upload" className="cursor-pointer">
-              <Avatar className="h-12 w-12">
-                {profileImage ? (
-                  <AvatarImage src={profileImage} alt="Profile" />
-                ) : (
-                  <AvatarImage src="https://picsum.photos/id/237/200/300" alt="Default Profile" /> // Ensure default is always present
-                )}
-                <AvatarFallback>JD</AvatarFallback> {/* Update dynamically if possible */}
+       </div>
+
+      <div className="flex flex-col md:flex-row gap-6">
+
+        {/* Left Column: Profile Picture */}
+        <div className="flex flex-col items-center md:w-1/4">
+           <Label htmlFor="profile-image-upload" className="cursor-pointer mb-4 relative group">
+              <Avatar className="h-32 w-32 border-2 border-muted p-1 neumorphic">
+                 {/* Add placeholder if no image */}
+                 <AvatarImage src={profileImage || undefined} alt={currentValues.fullName} />
+                 <AvatarFallback className="bg-secondary">
+                    <UserIcon className="h-16 w-16 text-muted-foreground" />
+                 </AvatarFallback>
               </Avatar>
+               {/* Overlay for edit icon */}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                    <Edit className="h-8 w-8 text-white" />
+                </div>
               <Input
                 type="file"
                 id="profile-image-upload"
+                ref={fileInputRef} // Add ref
                 className="hidden"
                 onChange={handleImageUpload}
                 accept="image/*"
               />
-            </Label>
-            <div>
-              <div className="text-lg font-semibold">{form.getValues("fullName")}</div>
-              <div className="text-sm text-muted-foreground">{form.getValues("contactNumber")}</div>
-              <div className="text-sm text-muted-foreground">{form.getValues("section")}</div>
-            </div>
-          </div>
+           </Label>
+        </div>
 
-          <CardDescription>
-            {form.getValues("bio")}
-          </CardDescription>
-        </CardContent>
-      </Card>
+        {/* Right Column: Profile Details */}
+        <div className="md:w-3/4 border rounded-md p-4 neumorphic bg-card">
+          <ProfileDetail label="Full Name" value={currentValues.fullName} />
+          <ProfileDetail label="Email" value={currentValues.email} />
+          <ProfileDetail label="Gender" value={currentValues.gender} />
+          <ProfileDetail label="Age" value={currentValues.age} />
+          <ProfileDetail label="Phone" value={currentValues.contactNumber} />
+          <ProfileDetail label="Address" value={currentValues.address} />
+          <Separator className="my-2"/> {/* Separator like in image */}
+          {/* Add static or dynamic fields like Last Login, Created At etc. if needed */}
+          {/* <ProfileDetail label="Created At" value="2 hours ago" />
+          <ProfileDetail label="Last Profile update" value="2 hours ago" />
+          <ProfileDetail label="Last Login" value="1 hour ago" /> */}
+          <ProfileDetail label="Classroom" value={currentValues.section} />
+          <ProfileDetail label="Parents" value={currentValues.parents} />
+
+          {/* Optional Bio Display */}
+          {currentValues.bio && (
+            <>
+             <Separator className="my-2"/>
+             <div className="pt-2">
+                <h3 className="font-semibold text-sm mb-1">Bio</h3>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{currentValues.bio}</p>
+             </div>
+            </>
+          )}
+        </div>
+      </div>
+
 
       {/* Crop Image Dialog */}
       <Dialog open={isCropDialogOpen} onOpenChange={setIsCropDialogOpen}>
