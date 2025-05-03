@@ -7,7 +7,8 @@ import {Button} from '@/components/ui/button';
 import {useEffect, useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
-import {Book, Brain, Calendar, CheckCircle2, Globe} from "lucide-react"; // Import CheckCircle2
+import {Book, Brain, Calendar, Globe } from "lucide-react";
+import { VerifiedBadge } from '@/components/ui/verified-badge'; // Import the new badge
 import {format} from 'date-fns';
 import Link from "next/link";
 
@@ -187,7 +188,7 @@ const Home = () => {
                           <CardDescription className="text-xs flex items-center flex-wrap"> {/* Allow wrapping for long names/dates */}
                              Uploaded by&nbsp;
                              <span className="font-medium">{upload.uploader}</span>
-                             {upload.uploaderIsVerified && <CheckCircle2 className="ml-1 h-3 w-3 text-blue-500 flex-shrink-0" />} {/* Blue tick */}
+                             {upload.uploaderIsVerified && <VerifiedBadge className="ml-1 h-3 w-3 flex-shrink-0" />} {/* Blue tick */}
                              <span className="mx-1">&middot;</span>
                              {format(new Date(upload.timestamp), 'MMM d, yyyy')}
                           </CardDescription>
@@ -218,4 +219,3 @@ const Home = () => {
 };
 
 export default Home;
-

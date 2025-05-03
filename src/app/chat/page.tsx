@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Paperclip, Send, Image as ImageIcon, File as FileIcon, CheckCircle2 } from 'lucide-react'; // Import CheckCircle2
+import { Paperclip, Send, Image as ImageIcon, File as FileIcon } from 'lucide-react';
+import { VerifiedBadge } from '@/components/ui/verified-badge'; // Import the new badge
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -286,7 +287,7 @@ const ChatPage = () => {
                 </Avatar>
                 <h1 className="text-xl font-semibold text-secondary-foreground flex items-center flex-shrink min-w-0"> {/* Allow shrinking */}
                     <span className="truncate">{adminDetails.displayName}</span> {/* Truncate long names */}
-                    {adminDetails.isVerified && <CheckCircle2 className="ml-1.5 h-4 w-4 text-blue-500 flex-shrink-0" />} {/* Blue tick for admin */}
+                    {adminDetails.isVerified && <VerifiedBadge className="ml-1.5 h-4 w-4 flex-shrink-0" />} {/* Blue tick for admin */}
                 </h1>
             </div>
 
@@ -314,7 +315,7 @@ const ChatPage = () => {
                                 {/* Sender Name and Verification */}
                                 <p className={`text-xs font-semibold mb-1 flex items-center ${msg.senderId === user.uid ? 'justify-end' : 'justify-start'}`}>
                                     {msg.senderDisplayName || 'User'}
-                                    {msg.senderIsVerified && <CheckCircle2 className="ml-1 h-3 w-3 text-blue-500 flex-shrink-0" />} {/* Blue tick */}
+                                    {msg.senderIsVerified && <VerifiedBadge className="ml-1 h-3 w-3 flex-shrink-0" />} {/* Blue tick */}
                                 </p>
 
                                 {msg.text && <p className="text-sm break-words">{msg.text}</p>}

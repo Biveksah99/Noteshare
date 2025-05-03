@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle2, XCircle, Search } from 'lucide-react';
+import { XCircle, Search } from 'lucide-react';
+import { VerifiedBadge } from '@/components/ui/verified-badge'; // Import the new badge
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
@@ -233,12 +234,12 @@ const AdminUsersPage = () => {
                                         <TableRow key={user.id}>
                                             <TableCell className="font-medium flex items-center">
                                                 {user.fullName}
-                                                {user.isVerified && <CheckCircle2 className="ml-1.5 h-4 w-4 text-blue-500 flex-shrink-0" />}
+                                                {user.isVerified && <VerifiedBadge className="ml-1.5 h-4 w-4 flex-shrink-0" />}
                                             </TableCell>
                                             <TableCell>{user.email || 'N/A'}</TableCell>
                                             <TableCell className="text-center">
                                                 {user.isVerified ? (
-                                                    <CheckCircle2 className="h-5 w-5 text-blue-500 inline" />
+                                                    <VerifiedBadge className="h-5 w-5 inline" />
                                                 ) : (
                                                     <XCircle className="h-5 w-5 text-muted-foreground inline" />
                                                 )}

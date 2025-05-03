@@ -22,7 +22,8 @@ import { useRouter } from "next/navigation"
 import { useState, useRef, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { Edit, Check, Crop, User as UserIcon, CheckCircle2 } from "lucide-react" // Import CheckCircle2
+import { Edit, Check, Crop, User as UserIcon } from "lucide-react"
+import { VerifiedBadge } from '@/components/ui/verified-badge'; // Import the new badge
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import ReactCrop, { type Crop as CropType, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
@@ -329,7 +330,7 @@ const ProfilePage = () => {
        <div className="flex justify-between items-center border-b pb-2 mb-6"> {/* Increased margin-bottom */}
           <h1 className="text-2xl font-semibold flex items-center">
              {currentValues.fullName || "User"}
-             {currentValues.isVerified && <CheckCircle2 className="ml-2 h-5 w-5 text-blue-500" />} {/* Blue tick */}
+             {currentValues.isVerified && <VerifiedBadge className="ml-2 h-5 w-5" />} {/* Blue tick */}
           </h1>
           <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
             <DialogTrigger asChild>
@@ -506,7 +507,7 @@ const ProfilePage = () => {
           <ProfileDetail label="Full Name">
              <span className="text-sm text-muted-foreground flex items-center">
                 {currentValues.fullName || 'N/A'}
-                {currentValues.isVerified && <CheckCircle2 className="ml-1 h-4 w-4 text-blue-500" />} {/* Blue tick */}
+                {currentValues.isVerified && <VerifiedBadge className="ml-1 h-4 w-4" />} {/* Blue tick */}
              </span>
           </ProfileDetail>
           <ProfileDetail label="Email" value={currentValues.email || 'N/A'} />
@@ -574,4 +575,3 @@ const ProfilePage = () => {
 }
 
 export default ProfilePage
-

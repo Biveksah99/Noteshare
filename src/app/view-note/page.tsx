@@ -6,7 +6,8 @@ import {useRouter, useSearchParams} from 'next/navigation';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 import {format} from 'date-fns';
-import {ChevronLeft, ChevronRight, Download, Expand, X, CheckCircle2 } from "lucide-react"; // Import X and CheckCircle2 icons
+import {ChevronLeft, ChevronRight, Download, Expand, X } from "lucide-react";
+import { VerifiedBadge } from '@/components/ui/verified-badge'; // Import the new badge
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog'; // Removed unused Footer, Header, Title
 import Link from "next/link";
@@ -175,7 +176,7 @@ const ViewNotePage = () => {
             <CardDescription className="text-xs flex items-center flex-wrap"> {/* Allow wrapping */}
               Uploaded by&nbsp;
               <span className="font-medium">{note.uploader || 'Unknown User'}</span>
-              {note.uploaderIsVerified && <CheckCircle2 className="ml-1 h-3 w-3 text-blue-500 flex-shrink-0" />} {/* Blue tick */}
+              {note.uploaderIsVerified && <VerifiedBadge className="ml-1 h-3 w-3 flex-shrink-0" />} {/* Blue tick */}
               <span className="mx-1">&middot;</span>
               {format(new Date(note.timestamp), 'MMM d, yyyy, p')} {/* Adjusted date format */}
             </CardDescription>
@@ -329,4 +330,3 @@ const ViewNotePage = () => {
 };
 
 export default ViewNotePage;
-

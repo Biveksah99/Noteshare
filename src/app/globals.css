@@ -97,3 +97,32 @@ body {
   box-shadow:  5px 5px 10px #D1D1D1,
                -5px -5px 10px #FFFFFF;
 }
+
+/* Verified Badge Shine Animation */
+@keyframes shine {
+  0% {
+    transform: translateX(-100%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(100%) skewX(-20deg);
+  }
+}
+
+.verified-badge {
+  position: relative;
+  overflow: hidden; /* Ensure shine stays within bounds */
+}
+
+.verified-badge-shine {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%; /* Width of the shine effect */
+  height: 100%;
+  /* background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%); */
+  fill: url(#shineGradient); /* Use the SVG gradient */
+  transform: translateX(-100%) skewX(-20deg); /* Initial position off-screen */
+  animation: shine 3s ease-in-out infinite; /* Adjust duration and timing */
+  mix-blend-mode: screen; /* Or 'overlay' or 'lighten' depending on desired effect */
+  pointer-events: none; /* Don't interfere with clicks */
+}

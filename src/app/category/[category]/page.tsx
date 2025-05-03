@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from 'date-fns';
 import Link from "next/link";
-import { File, Image as ImageIcon, CheckCircle2 } from "lucide-react"; // Import CheckCircle2
+import { File, Image as ImageIcon } from "lucide-react";
+import { VerifiedBadge } from '@/components/ui/verified-badge'; // Import the new badge
 
 // Interface for Note structure including uploader verification
 interface Note {
@@ -27,20 +28,20 @@ const DESCRIPTION_PREVIEW_LIMIT = 100; // Limit for description preview
 const CategoryDetailPage = ({ params }: { params: { category: string } }) => {
   const router = useRouter();
 
-  // Use useMemo with the params prop
-  const category = useMemo(() => {
-    // Check if params exists and category property is a string
-    if (!params || typeof params.category !== 'string') {
-      return ''; // Return empty string if params or category is invalid
-    }
-    try {
-      // Decode the category from params.category
-      return decodeURIComponent(params.category);
-    } catch (e) {
-      console.error("Failed to decode category param:", e);
-      return params.category; // Fallback to original if decoding fails
-    }
-  }, [params]); // Dependency is now params object
+  // Use React.use to unwrap the promise/value from params
+   const categoryParam = React.use(params.category);
+
+   const category = useMemo(() => {
+     if (!categoryParam || typeof categoryParam !== 'string') {
+       return ''; // Return empty string if param is invalid
+     }
+     try {
+       return decodeURIComponent(categoryParam);
+     } catch (e) {
+       console.error("Failed to decode category param:", e);
+       return categoryParam; // Fallback to original if decoding fails
+     }
+   }, [categoryParam]); // Dependency is the unwrapped value
 
 
   const [notes, setNotes] = useState<Note[]>([]); // Use Note interface
@@ -136,7 +137,7 @@ const CategoryDetailPage = ({ params }: { params: { category: string } }) => {
                       <AvatarFallback className="text-xs">{note.uploader.substring(0, 1)}</AvatarFallback>
                     </Avatar>
                     <span className="font-medium">{note.uploader}</span>
-                    {note.uploaderIsVerified && <CheckCircle2 className="ml-1 h-3 w-3 text-blue-500 flex-shrink-0" />} {/* Blue tick */}
+                    {note.uploaderIsVerified && <VerifiedBadge className="ml-1 h-3 w-3 flex-shrink-0" />} {/* Blue tick */}
                     <span className="mx-1">·</span>
                     {format(new Date(note.timestamp), 'MMM d, yyyy')}
                   </CardDescription>
