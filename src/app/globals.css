@@ -101,28 +101,37 @@ body {
 /* Verified Badge Shine Animation */
 @keyframes shine {
   0% {
-    transform: translateX(-100%) skewX(-20deg);
+    transform: translateX(-100%); /* Start off-screen left */
+    opacity: 0;
+  }
+  50% {
+    transform: translateX(0); /* Move across the badge */
+    opacity: 0.5; /* Peak brightness */
   }
   100% {
-    transform: translateX(100%) skewX(-20deg);
+    transform: translateX(100%); /* End off-screen right */
+    opacity: 0;
   }
 }
 
 .verified-badge {
   position: relative;
   overflow: hidden; /* Ensure shine stays within bounds */
+  display: inline-block; /* Needed for positioning the shine */
+  vertical-align: middle; /* Align badge nicely with text */
 }
 
+/* Adjust the shine element itself */
 .verified-badge-shine {
   position: absolute;
   top: 0;
   left: 0;
-  width: 50%; /* Width of the shine effect */
+  width: 100%; /* Cover the whole badge width */
   height: 100%;
-  /* background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%); */
-  fill: url(#shineGradient); /* Use the SVG gradient */
-  transform: translateX(-100%) skewX(-20deg); /* Initial position off-screen */
-  animation: shine 3s ease-in-out infinite; /* Adjust duration and timing */
-  mix-blend-mode: screen; /* Or 'overlay' or 'lighten' depending on desired effect */
+  /* Use a simpler, softer gradient */
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+  transform: translateX(-100%); /* Initial position off-screen */
+  animation: shine 2.5s ease-in-out infinite; /* Adjust duration/timing */
   pointer-events: none; /* Don't interfere with clicks */
+  border-radius: 50%; /* Ensure shine respects the circular shape */
 }
