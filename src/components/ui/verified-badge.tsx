@@ -9,7 +9,7 @@ interface VerifiedBadgeProps extends React.SVGProps<SVGSVGElement> {
 }
 
 const VerifiedBadge = React.forwardRef<SVGSVGElement, VerifiedBadgeProps>(
-  ({ className, width = 16, height = 16, ...props }, ref) => { // Reduced default size to 16x16
+  ({ className, width = 20, height = 20, ...props }, ref) => { // Increased default size to 20x20
     return (
       // Use inline-flex for better vertical alignment with text
       <span className={cn("verified-badge inline-flex items-center align-middle", className)}> {/* Use inline-flex */}
@@ -54,3 +54,4 @@ const VerifiedBadge = React.forwardRef<SVGSVGElement, VerifiedBadgeProps>(
 VerifiedBadge.displayName = 'VerifiedBadge';
 
 export { VerifiedBadge };
+
