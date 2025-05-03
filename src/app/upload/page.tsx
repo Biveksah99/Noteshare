@@ -71,10 +71,13 @@ const UploadPage = () => {
   const form = useForm<FormValues>({
     resolver: async (data, context, options) => {
       // Use Zod resolver
+      console.log("Validating data:", data);
       const result = formSchema.safeParse(data);
       if (!result.success) {
+        console.error("Validation failed:", result.error.flatten().fieldErrors);
         return { values: {}, errors: result.error.flatten().fieldErrors };
       }
+       console.log("Validation successful:", result.data);
       return { values: result.data, errors: {} };
     },
     defaultValues: {
@@ -86,6 +89,7 @@ const UploadPage = () => {
   })
 
   async function onSubmit(values: FormValues) {
+    console.log("Form submitted with values:", values);
     setIsLoading(true);
 
     if (authLoading || !user) {
@@ -128,6 +132,7 @@ const UploadPage = () => {
 
     for (const file of filesToProcess) {
       try {
+          console.log(`Processing file: ${file.name}`);
           const fileDataUrl = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => resolve(reader.result as string);
@@ -135,6 +140,7 @@ const UploadPage = () => {
             reader.readAsDataURL(file);
           });
           fileData.push({ url: fileDataUrl, type: file.type, name: file.name }); // Include file name
+          console.log(`Successfully processed file: ${file.name}`);
       } catch (error) {
           console.error("Error reading file:", file.name, error);
           toast({
@@ -183,7 +189,9 @@ const UploadPage = () => {
 
     // Store the updated notes back in local storage
     try {
+        console.log(`Saving notes for category: ${values.category}`);
         localStorage.setItem(values.category, JSON.stringify(updatedNotes));
+        console.log(`Successfully saved notes for category: ${values.category}`);
     } catch (error) {
         console.error(`Failed to save notes for category ${values.category} to localStorage.`, error);
         toast({
@@ -191,7 +199,7 @@ const UploadPage = () => {
           title: "Save Error",
           description: "Could not save the note locally.",
         });
-        setIsLoading(false);
+        setIsLoading(false); // Ensure loading state is reset on save error
         return; // Stop if saving fails
     }
 
@@ -210,17 +218,21 @@ const UploadPage = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    console.log("Files selected:", files);
+    // Allow adding more files to the existing selection
     const currentFiles = form.getValues("files") || [];
-    // Combine and cast to File[] for state
-    const newFiles = [...currentFiles, ...files] as File[];
-    setUploadedFiles(newFiles); // Update state with the combined list
-    form.setValue("files", newFiles, { shouldValidate: true }); // Update form's files array and trigger validation
+    const combinedFiles = [...currentFiles, ...files] as File[]; // Combine and ensure type
+    console.log("Combined files:", combinedFiles);
+
+    setUploadedFiles(combinedFiles); // Update state with the combined list
+    form.setValue("files", combinedFiles, { shouldValidate: true }); // Update form's files array and trigger validation
   };
 
   // Function to remove a file
   const removeFile = (indexToRemove: number) => {
     const currentFiles = form.getValues("files") || [];
     const updatedFiles = currentFiles.filter((_, index) => index !== indexToRemove);
+    console.log("Files after removal:", updatedFiles);
     setUploadedFiles(updatedFiles as File[]); // Update state
     form.setValue("files", updatedFiles, { shouldValidate: true }); // Update form and trigger validation
   };
@@ -356,7 +368,7 @@ const UploadPage = () => {
                   </FormItem>
                 )}
               />
-              {/* Moved Button outside the last FormField */}
+              {/* Moved Button inside the form element */}
               <CardFooter className="pt-4"> {/* Add padding top */}
                 <Button type="submit" className={cn("ml-auto bg-accent text-accent-foreground", isLoading && "cursor-not-allowed opacity-50")} disabled={isLoading || uploadedFiles.length === 0}>
                   {isLoading ? "Uploading..." : "Upload"}
