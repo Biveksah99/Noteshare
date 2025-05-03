@@ -137,7 +137,7 @@ const CategoryDetailPage = ({ params }: { params: { category: string } }) => {
                       <AvatarFallback className="text-xs">{note.uploader.substring(0, 1)}</AvatarFallback>
                     </Avatar>
                     <span className="font-medium mr-0.5">{note.uploader}</span> {/* Add small margin */}
-                    {/* Adjusted badge size and margin */}
+                    {/* Adjusted badge size and margin - Use h-3.5 w-3.5 */}
                     {note.uploaderIsVerified && <VerifiedBadge className="h-3.5 w-3.5 ml-0.5 flex-shrink-0" />}
                     <span className="mx-1">·</span>
                     {format(new Date(note.timestamp), 'MMM d, yyyy')}

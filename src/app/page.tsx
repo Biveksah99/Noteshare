@@ -188,7 +188,7 @@ const Home = () => {
                           <CardDescription className="text-xs flex items-center flex-wrap"> {/* Allow wrapping for long names/dates */}
                              Uploaded by&nbsp;
                              <span className="font-medium mr-0.5">{upload.uploader}</span> {/* Add small margin */}
-                             {/* Adjusted badge size and margin */}
+                             {/* Adjusted badge size and margin - Use h-3.5 w-3.5 */}
                              {upload.uploaderIsVerified && <VerifiedBadge className="h-3.5 w-3.5 ml-0.5 flex-shrink-0" />}
                              <span className="mx-1">&middot;</span>
                              {format(new Date(upload.timestamp), 'MMM d, yyyy')}

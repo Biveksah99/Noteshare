@@ -234,13 +234,13 @@ const AdminUsersPage = () => {
                                         <TableRow key={user.id}>
                                             <TableCell className="font-medium flex items-center">
                                                 <span>{user.fullName}</span>
-                                                 {/* Adjusted badge size and margin */}
+                                                 {/* Adjusted badge size and margin - Use h-4 w-4 */}
                                                 {user.isVerified && <VerifiedBadge className="ml-1.5 h-4 w-4 flex-shrink-0" />}
                                             </TableCell>
                                             <TableCell>{user.email || 'N/A'}</TableCell>
                                             <TableCell className="text-center">
                                                 {user.isVerified ? (
-                                                    /* Adjusted badge size */
+                                                    /* Adjusted badge size - Use h-4 w-4 */
                                                     <VerifiedBadge className="h-4 w-4 inline" />
                                                 ) : (
                                                     <XCircle className="h-5 w-5 text-muted-foreground inline" />

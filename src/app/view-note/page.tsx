@@ -176,7 +176,7 @@ const ViewNotePage = () => {
             <CardDescription className="text-xs flex items-center flex-wrap"> {/* Allow wrapping */}
               Uploaded by&nbsp;
               <span className="font-medium mr-0.5">{note.uploader || 'Unknown User'}</span> {/* Add small margin */}
-               {/* Adjusted badge size and margin */}
+               {/* Adjusted badge size and margin - Use h-3.5 w-3.5 */}
                {note.uploaderIsVerified && <VerifiedBadge className="h-3.5 w-3.5 ml-0.5 flex-shrink-0" />}
               <span className="mx-1">&middot;</span>
               {format(new Date(note.timestamp), 'MMM d, yyyy, p')} {/* Adjusted date format */}
