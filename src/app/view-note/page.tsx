@@ -38,10 +38,10 @@ function ViewNoteContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-   // Extract parameters using React.use() within Suspense boundary
-   const noteId = React.use(searchParams ? searchParams.get('id') : null); // Check if searchParams is null
-   const categoryParam = React.use(searchParams ? searchParams.get('category') : null); // Check if searchParams is null
-   const fileIndexParam = React.use(searchParams ? searchParams.get('fileIndex') : null); // Check if searchParams is null
+   // Extract parameters directly from searchParams.get()
+   const noteId = searchParams ? searchParams.get('id') : null;
+   const categoryParam = searchParams ? searchParams.get('category') : null;
+   const fileIndexParam = searchParams ? searchParams.get('fileIndex') : null;
 
 
   const [note, setNote] = useState<Note | null>(null);
@@ -119,25 +119,22 @@ function ViewNoteContent() {
     const encodedCategory = typeof category === 'string' ? encodeURIComponent(category) : '';
     // Ensure noteId is a string or handle appropriately
     const currentNoteId = typeof noteId === 'string' ? noteId : '';
+    // Use replace for non-navigational updates
     router.replace(`/view-note?id=${currentNoteId}&category=${encodedCategory}&fileIndex=${newIndex}`, { scroll: false });
   }, [router, noteId, category]); // Add dependencies
 
   const handlePrevClick = () => {
-    // Calculate the new index first
-    const newIndex = currentFileIndex > 0 ? currentFileIndex - 1 : (note?.files?.length || 1) - 1;
-    // Update the state
+    if (!note || !note.files || note.files.length <= 1) return; // Guard clause
+    const newIndex = currentFileIndex > 0 ? currentFileIndex - 1 : note.files.length - 1;
     setCurrentFileIndex(newIndex);
-    // Update the URL *after* scheduling state update
-    updateUrl(newIndex);
+    updateUrl(newIndex); // Update URL after state update is scheduled
   };
 
   const handleNextClick = () => {
-    // Calculate the new index first
-    const newIndex = currentFileIndex < (note?.files?.length || 1) - 1 ? currentFileIndex + 1 : 0;
-    // Update the state
+    if (!note || !note.files || note.files.length <= 1) return; // Guard clause
+    const newIndex = currentFileIndex < note.files.length - 1 ? currentFileIndex + 1 : 0;
     setCurrentFileIndex(newIndex);
-    // Update the URL *after* scheduling state update
-    updateUrl(newIndex);
+    updateUrl(newIndex); // Update URL after state update is scheduled
   };
 
 
@@ -374,7 +371,7 @@ function ViewNoteContent() {
 // Main component wrapping content with Suspense
 const ViewNotePage = () => {
   return (
-    // Wrap the component that uses React.use() in Suspense
+    // Wrap the component that uses searchParams in Suspense
     <Suspense fallback={
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
