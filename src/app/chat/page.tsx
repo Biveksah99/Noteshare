@@ -6,7 +6,7 @@ import { db, storage, auth } from '@/lib/firebase'; // Assuming you have firebas
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 // Try importing directly from the main package if subpath fails
-import { useAuthState } from 'react-firebase-hooks'; // Correct import path for v5
+import { useAuthState } from 'react-firebase-hooks/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
