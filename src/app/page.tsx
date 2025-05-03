@@ -7,7 +7,7 @@ import {Button} from '@/components/ui/button';
 import {useEffect, useState} from 'react';
 import {useRouter} from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Import Avatar components
-import {Book, Brain, Calendar, Globe, Upload } from "lucide-react"; // Import Upload icon
+import {Book, Brain, Calendar, Globe, Upload as UploadIcon } from "lucide-react"; // Renamed Upload icon
 import { VerifiedBadge } from '@/components/ui/verified-badge'; // Import the new badge
 import {format} from 'date-fns';
 import Link from "next/link";
@@ -40,6 +40,7 @@ interface Note {
   title: string;
   description: string;
   uploader: string;
+  uploaderId?: string; // Added uploaderId
   uploaderProfileImage?: string | null; // Added for profile image URL
   timestamp: string; // ISO string date
   files: Array<{ url: string; type: string; name?: string }>; // Added optional name
@@ -95,6 +96,8 @@ const Home = () => {
                  }
                });
             } else {
+                // Handle cases where the item is not an array but valid JSON (e.g., a single object)
+                // You might want to wrap it in an array or handle it differently based on your logic
                 console.warn(`Item with key ${key} is not an array, skipping.`);
             }
           } catch (e) {
@@ -197,22 +200,27 @@ const Home = () => {
                   <Link key={upload.id} href={`/view-note?id=${upload.id}&category=${encodeURIComponent(upload.category)}`} className="block group">
                     <Card className="neumorphic h-full transition-shadow duration-200 group-hover:shadow-lg overflow-hidden"> {/* Added overflow hidden */}
                       <CardHeader className="flex flex-row items-start space-x-3 p-4"> {/* Use items-start */}
-                        <Avatar className="h-10 w-10 flex-shrink-0 mt-1"> {/* Added margin top */}
-                           {/* Use uploaderProfileImage if available, fallback to picsum */}
-                           <AvatarImage
-                              src={upload.uploaderProfileImage || `https://picsum.photos/seed/${upload.uploader}/40/40`}
-                              alt={upload.uploader}
-                              data-ai-hint="user avatar"
-                            />
-                          <AvatarFallback>{upload.uploader ? upload.uploader.substring(0, 2).toUpperCase() : '??'}</AvatarFallback>
-                        </Avatar>
+                        {/* Link wrapping Avatar only, prevents card link navigation on avatar click */}
+                        <Link href={`/profile/${upload.uploaderId}`} onClick={(e) => e.stopPropagation()} className="group flex-shrink-0 mt-1">
+                          <Avatar className="h-10 w-10 group-hover:opacity-80 transition-opacity">
+                            <AvatarImage
+                                src={upload.uploaderProfileImage || `https://picsum.photos/seed/${upload.uploader}/40/40`}
+                                alt={upload.uploader}
+                                data-ai-hint="user avatar"
+                              />
+                            <AvatarFallback className="group-hover:bg-muted/80 transition-colors">{upload.uploader ? upload.uploader.substring(0, 2).toUpperCase() : '??'}</AvatarFallback>
+                          </Avatar>
+                        </Link>
                         <div className="flex-1 min-w-0">
                           <CardTitle className="text-lg line-clamp-1">{upload.title}</CardTitle>
                           <CardDescription className="text-xs flex items-center flex-wrap mt-1"> {/* Added margin top */}
                              Uploaded by&nbsp;
-                             <span className="font-medium mr-0.5">{upload.uploader}</span>
-                             {/* Adjusted badge size and margin */}
-                             {upload.uploaderIsVerified && <VerifiedBadge className="h-3.5 w-3.5 ml-0.5 flex-shrink-0" />}
+                             {/* Link wrapping uploader name */}
+                              <Link href={`/profile/${upload.uploaderId}`} className="font-medium mr-0.5 hover:underline group" onClick={(e) => e.stopPropagation()}>
+                                  <span>{upload.uploader}</span>
+                                   {/* Adjusted badge size and margin */}
+                                   {upload.uploaderIsVerified && <VerifiedBadge className="h-3.5 w-3.5 ml-0.5 flex-shrink-0 inline-block align-middle" />}
+                              </Link>
                              <span className="mx-1">&middot;</span>
                              {format(new Date(upload.timestamp), 'MMM d, yyyy')}
                              <span className="mx-1">&middot;</span>
@@ -237,7 +245,7 @@ const Home = () => {
       {/* Upload Button - Consider making it a FAB */}
       <div className="text-center mt-6">
         <Button onClick={handleUploadClick} className="bg-accent text-accent-foreground shadow-md hover:bg-accent/90 neumorphic">
-            <Upload className="mr-2 h-4 w-4" /> Upload Study Materials {/* Added icon */}
+            <UploadIcon className="mr-2 h-4 w-4" /> Upload Study Materials {/* Added icon */}
         </Button>
       </div>
     </div>

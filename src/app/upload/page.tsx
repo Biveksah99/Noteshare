@@ -14,6 +14,8 @@ import {useForm} from "react-hook-form"
 import * as z from "zod"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import { File } from "lucide-react";
+import { auth } from '@/lib/firebase'; // Import auth
+import { useAuthState } from 'react-firebase-hooks/auth'; // Import useAuthState
 
 const formSchema = z.object({
   category: z.string().min(1, {
@@ -39,6 +41,7 @@ const UploadPage = () => {
   const router = useRouter()
   const [categories, setCategories] = useState<string[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]); // State to hold uploaded files
+  const [user, authLoading] = useAuthState(auth); // Get current user state
 
   useEffect(() => {
     // Load categories from local storage on component mount
@@ -84,21 +87,39 @@ const UploadPage = () => {
   async function onSubmit(values: FormValues) {
     setIsLoading(true);
 
+    if (authLoading || !user) {
+        toast({
+            variant: "destructive",
+            title: "Authentication Error",
+            description: "You must be logged in to upload.",
+        });
+        setIsLoading(false);
+        return;
+    }
+
     // Get user profile from localStorage
-    let uploaderName = 'Anonymous'; // Default name
-    let uploaderProfileImage: string | null = null; // Default image
+    let uploaderName = user.displayName || 'Anonymous'; // Use auth display name first
+    let uploaderProfileImage: string | null = user.photoURL || null; // Use auth photo URL first
     let uploaderIsVerified = false; // Default verification status
     const userProfileRaw = localStorage.getItem('userProfile');
     if (userProfileRaw) {
       try {
         const userProfile = JSON.parse(userProfileRaw);
-        uploaderName = userProfile.fullName || 'Anonymous';
-        uploaderProfileImage = userProfile.profileImage || null;
-        uploaderIsVerified = userProfile.isVerified || false;
+        // Prefer localStorage data if available and matches the logged-in user
+        if (userProfile.email === user.email) {
+             uploaderName = userProfile.fullName || uploaderName;
+             uploaderProfileImage = userProfile.profileImage || uploaderProfileImage;
+             uploaderIsVerified = userProfile.isVerified || false;
+        }
       } catch (error) {
         console.error("Failed to parse user profile from localStorage for uploader info", error);
       }
     }
+
+    // --- TEMPORARY FOR TESTING BLUE TICK ---
+    uploaderIsVerified = true; // Keep forced true for testing
+    // --- END TEMPORARY ---
+
 
     const fileData = [];
     for (const file of values.files) {
@@ -128,6 +149,7 @@ const UploadPage = () => {
       title: values.title,
       description: values.description,
       uploader: uploaderName, // Use actual uploader name
+      uploaderId: user.uid, // Add the uploader's user ID
       uploaderProfileImage: uploaderProfileImage, // Include profile image URL
       uploaderIsVerified: uploaderIsVerified, // Include verification status
       timestamp: new Date().toISOString(),

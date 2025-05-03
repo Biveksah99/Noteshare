@@ -26,6 +26,7 @@ interface Note {
     title: string;
     description: string;
     uploader: string;
+    uploaderId?: string; // Added uploaderId
     uploaderProfileImage?: string | null; // Added for profile image URL
     timestamp: string; // ISO string date
     files: NoteFile[];
@@ -120,7 +121,7 @@ function ViewNoteContent() {
     // Ensure noteId is a string or handle appropriately
     const currentNoteId = typeof noteId === 'string' ? noteId : '';
     // Use replace for non-navigational updates
-    router.replace(`/view-note?id=${currentNoteId}&category=${encodedCategory}&fileIndex=${newIndex}`, { scroll: false });
+    // router.replace(`/view-note?id=${currentNoteId}&category=${encodedCategory}&fileIndex=${newIndex}`, { scroll: false });
   }, [router, noteId, category]); // Add dependencies
 
   const handlePrevClick = () => {
@@ -189,23 +190,24 @@ function ViewNoteContent() {
     <div className="container mx-auto p-4 md:p-6"> {/* Adjusted padding */}
       <Card className="mb-4 neumorphic bg-card shadow-lg rounded-lg overflow-hidden">
         <CardHeader className="flex flex-row items-start p-4 border-b bg-muted/30"> {/* items-start */}
-          <Avatar className="mr-4 h-10 w-10 flex-shrink-0 mt-1"> {/* Added margin-top */}
-             {/* Use uploaderProfileImage if available */}
-             <AvatarImage
+          {/* Link wrapping Avatar and uploader name */}
+          <Link href={`/profile/${note.uploaderId}`} className="flex items-center mr-4 flex-shrink-0 mt-1 group">
+            <Avatar className="mr-2 h-10 w-10"> {/* Removed margin-right from Avatar, added to Link */}
+              <AvatarImage
                 src={note.uploaderProfileImage || `https://picsum.photos/seed/${note.uploader}/40/40`}
                 alt={note.uploader || 'Uploader'}
                 data-ai-hint="user avatar"
+                className="group-hover:opacity-80 transition-opacity"
               />
-            <AvatarFallback>{note.uploader ? note.uploader.substring(0, 2).toUpperCase() : '??'}</AvatarFallback>
-          </Avatar>
+              <AvatarFallback className="group-hover:bg-muted/80 transition-colors">{note.uploader ? note.uploader.substring(0, 2).toUpperCase() : '??'}</AvatarFallback>
+            </Avatar>
+            <span className="font-medium mr-0.5 group-hover:underline">{note.uploader || 'Unknown User'}</span>
+             {/* Adjusted badge size and margin */}
+            {note.uploaderIsVerified && <VerifiedBadge className="h-4 w-4 ml-0.5 flex-shrink-0" />} {/* Adjusted size */}
+          </Link>
           <div className="flex-1 min-w-0">
             <CardTitle className="text-xl truncate">{note.title || 'Untitled Note'}</CardTitle>
             <CardDescription className="text-xs flex items-center flex-wrap mt-1"> {/* Added mt-1 */}
-              Uploaded by&nbsp;
-              <span className="font-medium mr-0.5">{note.uploader || 'Unknown User'}</span>
-               {/* Adjusted badge size and margin */}
-               {note.uploaderIsVerified && <VerifiedBadge className="h-3.5 w-3.5 ml-0.5 flex-shrink-0" />}
-              <span className="mx-1">&middot;</span>
               {format(new Date(note.timestamp), 'MMM d, yyyy, p')}
                {/* Link back to category */}
                <span className="mx-1">&middot;</span>

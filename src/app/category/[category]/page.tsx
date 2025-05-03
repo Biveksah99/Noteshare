@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo, Suspense } from 'react'; // Added Suspense
-import { useRouter, useParams, useSearchParams } from 'next/navigation'; // Correct import
+import { useRouter, useParams } from 'next/navigation'; // Correct import for useParams
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from 'date-fns';
@@ -16,6 +16,7 @@ interface Note {
   title: string;
   description: string;
   uploader: string;
+  uploaderId?: string; // Added uploaderId
   uploaderProfileImage?: string | null; // Added for profile image URL
   timestamp: string; // ISO string date
   files: Array<{ url: string; type: string; name?: string }>; // Added optional name
@@ -27,11 +28,10 @@ const DESCRIPTION_PREVIEW_LIMIT = 100; // Limit for description preview
 
 // Separate component to handle Suspense logic if needed, or keep within main component
 function CategoryDetailContent() {
-  const params = useParams();
+  const params = useParams(); // Use useParams hook
   const router = useRouter();
 
-  // Use React.use to unwrap the promise/value from params
-  // This requires the component or its parent to be wrapped in <Suspense>
+
   // Directly access params.category, no need for Promise.resolve + React.use here
   const categoryParam = params?.category;
 
@@ -141,18 +141,19 @@ function CategoryDetailContent() {
                 <CardHeader className="p-4 flex-shrink-0">
                   <CardTitle className="text-lg mb-1 line-clamp-2">{note.title}</CardTitle>
                   <CardDescription className="text-xs flex items-center flex-wrap mt-1"> {/* Allow wrapping */}
-                    <Avatar className="h-5 w-5 mr-1.5 flex-shrink-0">
-                       {/* Use uploaderProfileImage if available, fallback to picsum */}
-                       <AvatarImage
-                         src={note.uploaderProfileImage || `https://picsum.photos/seed/${note.uploader}/20/20`}
-                         alt={note.uploader}
-                         data-ai-hint="user avatar tiny"
-                       />
-                      <AvatarFallback className="text-xs">{note.uploader ? note.uploader.substring(0, 1).toUpperCase() : '?'}</AvatarFallback>
-                    </Avatar>
-                    <span className="font-medium mr-0.5">{note.uploader}</span> {/* Add small margin */}
-                    {/* Adjusted badge size and margin */}
-                    {note.uploaderIsVerified && <VerifiedBadge className="h-3.5 w-3.5 ml-0.5 flex-shrink-0" />}
+                   {/* Link wrapping Avatar and uploader name */}
+                    <Link href={`/profile/${note.uploaderId}`} className="flex items-center group mr-1" onClick={(e) => e.stopPropagation()}> {/* Prevent card link navigation */}
+                       <Avatar className="h-5 w-5 mr-1.5 flex-shrink-0 group-hover:opacity-80 transition-opacity">
+                          <AvatarImage
+                            src={note.uploaderProfileImage || `https://picsum.photos/seed/${note.uploader}/20/20`}
+                            alt={note.uploader}
+                            data-ai-hint="user avatar tiny"
+                          />
+                         <AvatarFallback className="text-xs group-hover:bg-muted/80 transition-colors">{note.uploader ? note.uploader.substring(0, 1).toUpperCase() : '?'}</AvatarFallback>
+                       </Avatar>
+                       <span className="font-medium group-hover:underline">{note.uploader}</span>
+                       {note.uploaderIsVerified && <VerifiedBadge className="h-3.5 w-3.5 ml-0.5 flex-shrink-0" />}
+                    </Link>
                     <span className="mx-1">·</span>
                     <span title={new Date(note.timestamp).toLocaleString()}> {/* Add title for exact time */}
                         {format(new Date(note.timestamp), 'MMM d, yyyy')}
