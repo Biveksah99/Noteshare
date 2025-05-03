@@ -36,7 +36,6 @@ const formSchema = z.object({
   // Use z.instanceof(File) for better type checking
   files: z.array(z.instanceof(File))
     .min(1, { message: "Please upload at least one file." })
-    // The instanceof check replaces the need for manual refinement
 })
 
 type FormValues = z.infer<typeof formSchema>;
@@ -71,9 +70,9 @@ const UploadPage = () => {
       console.log("Validating data:", data);
       const result = formSchema.safeParse(data);
       if (!result.success) {
-        console.error("Validation failed:", result.error.flatten().fieldErrors);
         // Log the raw error object for more details if flatten doesn't work as expected
         console.error("Raw Zod error:", result.error);
+        console.error("Flattened field errors:", result.error.flatten().fieldErrors); // Keep this too
         return { values: {}, errors: result.error.flatten().fieldErrors };
       }
        console.log("Validation successful:", result.data);
@@ -221,7 +220,9 @@ const UploadPage = () => {
     // Allow adding more files to the existing selection
     const currentFiles = form.getValues("files") || [];
     // Filter out any non-File objects just in case (though schema should handle it)
-    const currentValidFiles = currentFiles.filter(f => f instanceof File);
+    // Ensure currentFiles is an array before filtering
+     const currentValidFiles = Array.isArray(currentFiles) ? currentFiles.filter(f => f instanceof File) : [];
+
     const combinedFiles = [...currentValidFiles, ...files]; // Combine and ensure type
     console.log("Combined files:", combinedFiles);
 
@@ -235,7 +236,8 @@ const UploadPage = () => {
   // Function to remove a file
   const removeFile = (indexToRemove: number) => {
     const currentFiles = form.getValues("files") || [];
-    const updatedFiles = currentFiles.filter((_, index) => index !== indexToRemove);
+     // Ensure currentFiles is an array before filtering
+    const updatedFiles = Array.isArray(currentFiles) ? currentFiles.filter((_, index) => index !== indexToRemove) : [];
     console.log("Files after removal:", updatedFiles);
     setUploadedFiles(updatedFiles); // Update state
     form.setValue("files", updatedFiles, { shouldValidate: true }); // Update form and trigger validation
@@ -243,7 +245,7 @@ const UploadPage = () => {
 
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-background p-4"> {/* Added padding */}
+    <div className="container mx-auto p-6 flex justify-center items-start pt-10"> {/* Added padding-top */}
       <Card className="w-full max-w-lg bg-card text-card-foreground shadow-lg neumorphic"> {/* Adjusted max-width */}
         <CardHeader>
           <CardTitle className="text-2xl font-semibold">Upload Study Material</CardTitle>
@@ -387,4 +389,3 @@ const UploadPage = () => {
 }
 
 export default UploadPage
-    
