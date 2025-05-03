@@ -18,7 +18,7 @@ import { File as FileIcon, UploadCloud } from "lucide-react"; // Added UploadClo
 import { auth } from '@/lib/firebase'; // Import auth
 import { useAuthState } from 'react-firebase-hooks/auth'; // Import useAuthState
 
-// Updated schema: Use z.instanceof(File) for robust validation
+// Updated schema: Use z.any() with refine for broader compatibility
 const formSchema = z.object({
   category: z.string().min(1, {
     message: "Category must be selected.",
@@ -33,15 +33,10 @@ const formSchema = z.object({
   description: z.string().min(10, {
     message: "Description must be at least 10 characters.",
   }),
-  // Use z.array(z.instanceof(File)) for multiple files
-  files: z.array(z.instanceof(File))
+  // Use z.any() and rely on refine for file validation
+  files: z.array(z.any())
     .min(1, { message: "Please upload at least one file." })
-    // Ensure it's an array of File objects. This should work if the input provides File objects.
-    // z.instanceof(File) might not work reliably across environments, let's use a custom check
-    // .refine((files) => files.every(file => file instanceof File), {
-    //   message: "Expected an array of files.", // Additional check
-    // }),
-    // More reliable check using typeof and name
+    // Refine check ensures items are file-like objects
     .refine((files) => files.every(file => typeof file === 'object' && file !== null && 'name' in file && 'size' in file && 'type' in file), {
        message: "Expected an array of file-like objects.",
      }),
@@ -78,9 +73,9 @@ const UploadPage = () => {
       // Use Zod resolver
       console.log("Validating data:", data);
        // Ensure files is always an array before validation
-       // The custom refine in the schema should handle the check, but this is a safeguard
       const dataToValidate = {
          ...data,
+         // Filter out potential non-file items if necessary, though refine should handle it
          files: Array.isArray(data.files) ? data.files.filter(f => typeof f === 'object' && f !== null) : [],
       };
 
@@ -142,7 +137,6 @@ const UploadPage = () => {
 
     const fileData = [];
     // Ensure values.files is treated as an array of File objects
-    // If validation passed, values.files should already be File[]
     const filesToProcess: File[] = Array.isArray(values.files) ? values.files : [];
 
     if (filesToProcess.length === 0) {
@@ -157,10 +151,9 @@ const UploadPage = () => {
 
 
     for (const file of filesToProcess) {
-        // Double-check if it's a File object before processing
-        // Using a more robust check since instanceof might fail
+         // Double-check if it's a file-like object before processing
          if (!(typeof file === 'object' && file !== null && 'name' in file && 'size' in file && 'type' in file)) {
-            console.warn("Skipping non-File item:", file);
+            console.warn("Skipping non-File item during submission:", file);
             continue;
         }
       try {
@@ -254,7 +247,7 @@ const UploadPage = () => {
     // Allow adding more files to the existing selection
     const currentFiles = form.getValues("files") || [];
     // Filter out any non-File objects just in case
-    const currentValidFiles = Array.isArray(currentFiles) ? currentFiles.filter(f => typeof f === 'object' && f !== null) : [];
+    const currentValidFiles = Array.isArray(currentFiles) ? currentFiles.filter(f => typeof f === 'object' && f !== null && 'name' in f && 'size' in f && 'type' in f) : [];
 
     const combinedFiles = [...currentValidFiles, ...files]; // Combine
     console.log("Combined files:", combinedFiles);
@@ -273,6 +266,7 @@ const UploadPage = () => {
   // Function to remove a file
   const removeFile = (indexToRemove: number) => {
     const currentFiles = form.getValues("files") || [];
+     // Filter out based on index, ensure currentFiles is treated as array
     const updatedFiles = Array.isArray(currentFiles) ? currentFiles.filter((_, index) => index !== indexToRemove) : [];
     console.log("Files after removal:", updatedFiles);
     setUploadedFiles(updatedFiles); // Update state
@@ -384,10 +378,6 @@ const UploadPage = () => {
                           accept=".pdf,.doc,.docx,.ppt,.pptx,image/*" // Specify accepted types
                        />
                     </FormControl>
-                    {/* Remove the separate "Add Files" button */}
-                    {/* <FormDescription>
-                      Supported files: PDF, Word, PPT, Images. You can add multiple files.
-                    </FormDescription> */}
                     {/* Display error message if validation fails */}
                     {fieldState.error && <FormMessage>{fieldState.error.message}</FormMessage>}
 
@@ -397,22 +387,25 @@ const UploadPage = () => {
                         <h4 className="text-sm font-medium">Selected Files:</h4>
                         <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground max-h-32 overflow-y-auto border rounded-md p-2">
                           {uploadedFiles.map((file, index) => (
-                            <li key={index} className="flex items-center justify-between">
-                              <span className="truncate mr-2 flex items-center">
-                                <FileIcon className="h-4 w-4 inline mr-1.5 flex-shrink-0" />
-                                {file.name} <span className="text-xs ml-1">({ (file.size / 1024).toFixed(1) } KB)</span>
-                              </span>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeFile(index)}
-                                className="text-destructive hover:text-destructive/80 h-auto p-1 ml-2 flex-shrink-0" // Added margin
-                                aria-label={`Remove ${file.name}`}
-                              >
-                                Remove
-                              </Button>
-                            </li>
+                             // Ensure file has a 'name' property before accessing it
+                             file && typeof file === 'object' && 'name' in file && (
+                              <li key={index} className="flex items-center justify-between">
+                                <span className="truncate mr-2 flex items-center">
+                                  <FileIcon className="h-4 w-4 inline mr-1.5 flex-shrink-0" />
+                                  {file.name} {file.size ? <span className="text-xs ml-1">({ (file.size / 1024).toFixed(1) } KB)</span> : ''}
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeFile(index)}
+                                  className="text-destructive hover:text-destructive/80 h-auto p-1 ml-2 flex-shrink-0" // Added margin
+                                  aria-label={`Remove ${file.name}`}
+                                >
+                                  Remove
+                                </Button>
+                              </li>
+                            )
                           ))}
                         </ul>
                       </div>
