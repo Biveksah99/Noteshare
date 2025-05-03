@@ -3,7 +3,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card" // Added CardFooter
 import {
   Form,
   FormControl,
@@ -158,7 +158,13 @@ const ProfilePage = () => {
         const profileData = JSON.parse(savedProfile);
         // Ensure default values are handled if fields are missing
         const defaults = form.formState.defaultValues;
-        form.reset({ ...defaults, ...profileData }); // Update form with saved data, keeping defaults for missing fields
+        // Explicitly include isVerified from loaded data or default to false
+        const loadedData = {
+          ...defaults,
+          ...profileData,
+          isVerified: profileData.isVerified || false // Ensure isVerified is loaded correctly
+        };
+        form.reset(loadedData); // Update form with saved data, keeping defaults for missing fields
         if (profileData.profileImage) {
             setProfileImage(profileData.profileImage);
         } else {
@@ -169,10 +175,12 @@ const ProfilePage = () => {
         console.error("Failed to parse profile data from localStorage", error);
         // Set default image if loading fails
         setProfileImage("https://picsum.photos/id/237/200/300");
+        form.reset({...form.formState.defaultValues, isVerified: false}); // Reset with default verification status on error
       }
     } else {
         // Set default image if no profile exists
         setProfileImage("https://picsum.photos/id/237/200/300");
+        form.reset({...form.formState.defaultValues, isVerified: false}); // Reset with default verification status if no profile
     }
   }, [form]);
 
@@ -186,8 +194,14 @@ const ProfilePage = () => {
     // Save profile data (including the potentially updated image URL) to localStorage
     try {
       // Keep the existing isVerified status unless an admin changes it elsewhere
-      const currentProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
-      const profileToSave = { ...values, profileImage, isVerified: currentProfile.isVerified || false };
+      const currentProfileRaw = localStorage.getItem('userProfile');
+      const currentProfile = currentProfileRaw ? JSON.parse(currentProfileRaw) : {};
+      // Preserve the current isVerified status when saving other updates
+      const profileToSave = {
+         ...values,
+         profileImage,
+         isVerified: currentProfile.isVerified || values.isVerified || false // Preserve existing or use form value, default false
+       };
       localStorage.setItem('userProfile', JSON.stringify(profileToSave));
       console.log("Profile saved to localStorage:", profileToSave);
       form.reset(profileToSave); // Update form state after saving
@@ -257,8 +271,14 @@ const ProfilePage = () => {
         setProfileImage(croppedImageUrl); // Update profile image state
         // Immediately save the updated image URL with the rest of the profile data
         const currentValues = form.getValues();
-        const currentProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
-        const profileToSave = { ...currentValues, profileImage: croppedImageUrl, isVerified: currentProfile.isVerified || false };
+        // Preserve existing verification status when updating image
+        const currentProfileRaw = localStorage.getItem('userProfile');
+        const currentProfile = currentProfileRaw ? JSON.parse(currentProfileRaw) : {};
+        const profileToSave = {
+           ...currentValues,
+           profileImage: croppedImageUrl,
+           isVerified: currentProfile.isVerified || currentValues.isVerified || false
+        };
         localStorage.setItem('userProfile', JSON.stringify(profileToSave));
 
         setIsCropDialogOpen(false);
@@ -425,7 +445,7 @@ const ProfilePage = () => {
                       </FormItem>
                     )}
                   />
-                   {/* Submit button needs to be outside the scrollable form area but inside the DialogFooter */}
+                   {/* Submit button needs to be inside the DialogFooter */}
                    <DialogFooter>
                       <Button type="submit" className={cn("ml-auto bg-accent text-accent-foreground", isLoading && "cursor-not-allowed opacity-50")} disabled={isLoading}>
                         {isLoading ? "Updating..." : "Update Profile"}

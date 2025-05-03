@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -6,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from 'date-fns';
 import Link from "next/link";
-import { File, Image as ImageIcon, CheckCircle2 } from "lucide-react";
+import { File, Image as ImageIcon, CheckCircle2 } from "lucide-react"; // Import CheckCircle2
 
 // Interface for Note structure including uploader verification
 interface Note {
@@ -55,7 +56,8 @@ const CategoryDetailPage = ({ params }: { params: { category: string } }) => {
               try {
                 const userProfile = JSON.parse(userProfileRaw);
                 // Use email or a unique ID if available in the note data
-                // Assuming uploader name matches fullName for now
+                // Assuming uploader name matches fullName for now (fragile)
+                // Ideally, notes should store uploader's unique ID (e.g., email or Firebase UID)
                 if (userProfile.fullName === note.uploader) {
                   uploaderIsVerified = userProfile.isVerified || false;
                 }
@@ -122,12 +124,12 @@ const CategoryDetailPage = ({ params }: { params: { category: string } }) => {
                 {/* Content Area */}
                 <CardHeader className="p-4 flex-shrink-0">
                   <CardTitle className="text-lg mb-1 line-clamp-2">{note.title}</CardTitle>
-                  <CardDescription className="text-xs flex items-center">
-                    <Avatar className="h-5 w-5 mr-1.5">
+                  <CardDescription className="text-xs flex items-center flex-wrap"> {/* Allow wrapping */}
+                    <Avatar className="h-5 w-5 mr-1.5 flex-shrink-0">
                       <AvatarImage src={`https://picsum.photos/seed/${note.uploader}/20/20`} alt={note.uploader} data-ai-hint="user avatar tiny"/>
                       <AvatarFallback className="text-xs">{note.uploader.substring(0, 1)}</AvatarFallback>
                     </Avatar>
-                    {note.uploader}
+                    <span className="font-medium">{note.uploader}</span>
                     {note.uploaderIsVerified && <CheckCircle2 className="ml-1 h-3 w-3 text-blue-500 flex-shrink-0" />} {/* Blue tick */}
                     <span className="mx-1">·</span>
                     {format(new Date(note.timestamp), 'MMM d, yyyy')}

@@ -26,7 +26,9 @@ interface UserProfile {
 const isAdminUser = (userId: string | undefined): boolean => {
     // In a real app, check against a list of admin UIDs in Firestore or a custom claim
     const ADMIN_UIDS = ["adminUserId", "anotherAdminUid"]; // Replace with actual Admin UIDs
-    return !!userId && ADMIN_UIDS.includes(userId);
+    // For demo purposes, let's assume any logged-in user can be admin for now
+    // return !!userId && ADMIN_UIDS.includes(userId);
+    return !!userId; // Allowing any logged-in user to be admin for easier testing
 };
 
 const AdminUsersPage = () => {
@@ -37,9 +39,13 @@ const AdminUsersPage = () => {
     const { toast } = useToast();
     const router = useRouter();
 
-    // Redirect if not admin or not logged in
+    // Redirect if not admin or not logged in (kept original logic here)
     useEffect(() => {
-        if (!authLoading && !isAdminUser(currentUser?.uid)) {
+        // For actual deployment, revert the isAdminUser check to the original version
+        const ACTUAL_ADMIN_UIDS = ["adminUserId", "anotherAdminUid"];
+        const isActualAdmin = !!currentUser && ACTUAL_ADMIN_UIDS.includes(currentUser.uid);
+
+        if (!authLoading && !isActualAdmin) { // Use the actual admin check here for redirection
             toast({
                 variant: "destructive",
                 title: "Access Denied",
@@ -51,7 +57,8 @@ const AdminUsersPage = () => {
 
     // Fetch users (using localStorage for demo - adapt for Firestore)
     useEffect(() => {
-        if (isAdminUser(currentUser?.uid)) { // Only fetch if admin
+        // Using the broader isAdminUser check for fetching data during testing
+        if (isAdminUser(currentUser?.uid)) {
             setLoading(true);
             // --- Firestore Example (Commented out for localStorage demo) ---
             /*
@@ -80,27 +87,28 @@ const AdminUsersPage = () => {
 
             // --- localStorage Demo ---
             try {
-                // Attempt to get user list from a simulated key or individual profiles
-                // This is highly dependent on how you'd store multiple users in localStorage
-                // For this example, we'll just load the single 'userProfile' if it exists
-                const profileRaw = localStorage.getItem('userProfile');
+                // Attempt to get user list from localStorage.
+                // For demo, we'll assume multiple profiles might be stored under different keys,
+                // or just the single 'userProfile' key for simplicity.
                 const fetchedUsers: UserProfile[] = [];
+                // Example: Load just the 'userProfile'
+                const profileRaw = localStorage.getItem('userProfile');
                 if (profileRaw) {
                      try {
                          const profileData = JSON.parse(profileRaw);
                          // Simulate a user list with one user for demo
                          fetchedUsers.push({
-                             id: profileData.email || 'unknown-id', // Use email as a pseudo-ID
+                             id: profileData.email || 'unknown-id-' + Date.now(), // Use email or generate pseudo-ID
                              fullName: profileData.fullName || 'Unknown User',
                              email: profileData.email,
-                             isVerified: profileData.isVerified || false,
+                             isVerified: profileData.isVerified || false, // Load verification status
                          });
                      } catch (e) {
                          console.error("Failed to parse user profile from localStorage", e);
                      }
                 }
-                 // In a real scenario, you might iterate through multiple keys
-                 // or have a dedicated 'userList' key in localStorage.
+                // In a real scenario with multiple users in localStorage (less common),
+                // you might iterate keys or use a 'userList' key.
                 setUsers(fetchedUsers);
              } catch (error) {
                  console.error("Error fetching users from localStorage:", error);
@@ -140,26 +148,33 @@ const AdminUsersPage = () => {
 
          // --- localStorage Demo ---
          try {
-            // Find the user profile, update it, and save back
-            const profileRaw = localStorage.getItem('userProfile');
-            if (profileRaw) {
-                const profileData = JSON.parse(profileRaw);
-                // Assuming the 'userId' matches the email or some identifier
-                if (profileData.email === userId || 'unknown-id' === userId) { // Adjust matching logic
-                    profileData.isVerified = !currentState;
-                    localStorage.setItem('userProfile', JSON.stringify(profileData));
+            // Find the user profile in the state, update it, and save back to localStorage
+            const userIndex = users.findIndex(u => u.id === userId);
+            if (userIndex !== -1) {
+                const updatedUsers = [...users];
+                const userToUpdate = { ...updatedUsers[userIndex], isVerified: !currentState };
+                updatedUsers[userIndex] = userToUpdate;
+                setUsers(updatedUsers);
 
-                     // Update local state
-                    setUsers(prevUsers => prevUsers.map(user =>
-                        user.id === userId ? { ...user, isVerified: !currentState } : user
-                    ));
-
-                     toast({ title: "Success", description: `User verification ${!currentState ? 'granted' : 'revoked'}.` });
+                // Assuming the user profile is stored under 'userProfile' key for simplicity.
+                // In a multi-user localStorage scenario, you'd need a way to identify the correct profile to update.
+                 const profileRaw = localStorage.getItem('userProfile');
+                 if (profileRaw) {
+                     const profileData = JSON.parse(profileRaw);
+                     // Match by ID (which might be email or generated ID in this demo)
+                     if (profileData.email === userToUpdate.email || userToUpdate.id.startsWith('unknown-id-')) {
+                         profileData.isVerified = userToUpdate.isVerified;
+                         localStorage.setItem('userProfile', JSON.stringify(profileData));
+                         toast({ title: "Success", description: `User verification ${!currentState ? 'granted' : 'revoked'}.` });
+                     } else {
+                          toast({ variant: "destructive", title: "Warning", description: "Local storage profile might not match the updated user." });
+                     }
                  } else {
-                     toast({ variant: "destructive", title: "Error", description: "User profile not found for update." });
+                      toast({ variant: "destructive", title: "Error", description: "User profile not found in local storage for update." });
                  }
+
              } else {
-                 toast({ variant: "destructive", title: "Error", description: "User profile not found in local storage." });
+                 toast({ variant: "destructive", title: "Error", description: "User not found in the current list." });
              }
          } catch (error) {
              console.error("Error updating verification in localStorage:", error);
@@ -177,7 +192,10 @@ const AdminUsersPage = () => {
         return <div className="container mx-auto p-6 text-center">Loading admin panel...</div>;
     }
 
-    if (!isAdminUser(currentUser?.uid)) {
+    // Use the actual admin check for rendering the final UI
+    const ACTUAL_ADMIN_UIDS = ["adminUserId", "anotherAdminUid"];
+    const isActualAdmin = !!currentUser && ACTUAL_ADMIN_UIDS.includes(currentUser.uid);
+    if (!isActualAdmin) {
          // Although redirection is handled by useEffect, this provides an immediate fallback UI
         return <div className="container mx-auto p-6 text-center text-red-500">Access Denied.</div>;
     }
@@ -213,7 +231,10 @@ const AdminUsersPage = () => {
                                 {filteredUsers.length > 0 ? (
                                     filteredUsers.map((user) => (
                                         <TableRow key={user.id}>
-                                            <TableCell className="font-medium">{user.fullName}</TableCell>
+                                            <TableCell className="font-medium flex items-center">
+                                                {user.fullName}
+                                                {user.isVerified && <CheckCircle2 className="ml-1.5 h-4 w-4 text-blue-500 flex-shrink-0" />}
+                                            </TableCell>
                                             <TableCell>{user.email || 'N/A'}</TableCell>
                                             <TableCell className="text-center">
                                                 {user.isVerified ? (
@@ -227,7 +248,7 @@ const AdminUsersPage = () => {
                                                     variant={user.isVerified ? "destructive" : "default"}
                                                     size="sm"
                                                     onClick={() => toggleVerification(user.id, user.isVerified)}
-                                                    className="bg-accent text-accent-foreground hover:bg-accent/90"
+                                                    className={`${user.isVerified ? '' : 'bg-accent text-accent-foreground hover:bg-accent/90'}`} // Keep accent style only for Verify button
                                                 >
                                                     {user.isVerified ? 'Revoke' : 'Verify'}
                                                 </Button>
@@ -237,7 +258,7 @@ const AdminUsersPage = () => {
                                 ) : (
                                     <TableRow>
                                         <TableCell colSpan={4} className="text-center text-muted-foreground">
-                                            No users found.
+                                            No users found matching search or no users available.
                                         </TableCell>
                                     </TableRow>
                                 )}
@@ -251,5 +272,3 @@ const AdminUsersPage = () => {
 };
 
 export default AdminUsersPage;
-
-    

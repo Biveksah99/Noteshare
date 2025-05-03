@@ -69,6 +69,7 @@ const Home = () => {
                      try {
                        const userProfile = JSON.parse(userProfileRaw);
                        // Assuming uploader name matches fullName in profile
+                       // NOTE: This comparison might be fragile. Ideally, use a unique user ID.
                        if (userProfile.fullName === note.uploader) {
                          uploaderIsVerified = userProfile.isVerified || false;
                        }
@@ -171,23 +172,24 @@ const Home = () => {
                 {recentUploads.map((upload) => (
                   <Link key={upload.id} href={`/view-note?id=${upload.id}&category=${upload.category}`} className="block group">
                     <Card className="neumorphic h-full transition-shadow duration-200 group-hover:shadow-lg">
-                      <CardHeader className="flex flex-row items-center space-x-3">
+                      <CardHeader className="flex flex-row items-center space-x-3 p-4"> {/* Adjust padding */}
                         <Avatar className="h-10 w-10">
                           {/* Placeholder image - Consider fetching user's actual avatar */}
                           <AvatarImage src={`https://picsum.photos/seed/${upload.uploader}/40/40`} alt={upload.uploader} data-ai-hint="user avatar"/>
                           <AvatarFallback>{upload.uploader.substring(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
-                          <CardTitle className="text-lg">{upload.title}</CardTitle>
-                          <CardDescription className="text-xs flex items-center">
-                             Uploaded by {upload.uploader}
-                             {upload.uploaderIsVerified && <CheckCircle2 className="ml-1 h-3 w-3 text-blue-500" />} {/* Blue tick */}
-                              {' on '}
-                             {format(new Date(upload.timestamp), 'PPp')} {/* More detailed format */}
+                          <CardTitle className="text-lg line-clamp-1">{upload.title}</CardTitle> {/* Ensure title doesn't wrap excessively */}
+                          <CardDescription className="text-xs flex items-center flex-wrap"> {/* Allow wrapping for long names/dates */}
+                             Uploaded by&nbsp;
+                             <span className="font-medium">{upload.uploader}</span>
+                             {upload.uploaderIsVerified && <CheckCircle2 className="ml-1 h-3 w-3 text-blue-500 flex-shrink-0" />} {/* Blue tick */}
+                             <span className="mx-1">&middot;</span>
+                             {format(new Date(upload.timestamp), 'MMM d, yyyy')}
                           </CardDescription>
                         </div>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="p-4 pt-0"> {/* Adjust padding */}
                         <CardDescription className="text-sm line-clamp-2"> {/* Limit description lines */}
                             {upload.description}
                         </CardDescription>

@@ -46,7 +46,7 @@ const ChatPage = () => {
     const [adminDetails, setAdminDetails] = useState<{ photoURL: string; displayName: string; isVerified: boolean } | null>(null);
 
 
-    // Fetch current user's verification status
+    // Fetch current user's verification status from localStorage
      useEffect(() => {
         if (user) {
             const profile = localStorage.getItem('userProfile');
@@ -54,37 +54,44 @@ const ChatPage = () => {
                 try {
                     const parsedProfile = JSON.parse(profile);
                     // Simple check using email (or UID if profile stores it)
-                    if(parsedProfile.email === user.email) {
+                    // Ensure parsedProfile.email and user.email are not null/undefined
+                    if(parsedProfile.email && user.email && parsedProfile.email === user.email) {
                          setUserIsVerified(parsedProfile.isVerified || false);
+                    } else {
+                        // If email doesn't match or is missing, assume not verified for safety
+                        setUserIsVerified(false);
                     }
                 } catch (e) {
                     console.error("Failed to parse user profile for verification status", e);
+                    setUserIsVerified(false); // Default to false on error
                 }
+            } else {
+                 setUserIsVerified(false); // Default to false if no profile
             }
+        } else {
+            setUserIsVerified(false); // Default to false if no user
         }
      }, [user]);
 
+    // Fetch admin's details (including verification status)
     useEffect(() => {
-        // Example: Fetch admin details (replace with your actual fetching logic)
         const fetchAdminDetails = async () => {
-            // Simulating fetching admin data
-            // In a real app, fetch from Firestore or your backend
-            // For demo, using localStorage similar to user profile
+            // Simulating fetching admin data from localStorage
+            // Replace with actual Firestore fetch if admin data is stored there
              const adminProfileRaw = localStorage.getItem('adminUserProfile'); // Assuming a separate key for admin
              if (adminProfileRaw) {
                  try {
                      const adminProfile = JSON.parse(adminProfileRaw);
-                     // Assuming the admin profile has similar structure
                      setAdminDetails({
-                         photoURL: adminProfile.profileImage || "https://picsum.photos/id/10/32/32", // Placeholder
+                         photoURL: adminProfile.profileImage || `https://picsum.photos/seed/${ADMIN_ID}/32/32`, // Placeholder with seed
                          displayName: adminProfile.fullName || "Admin", // Placeholder
-                         isVerified: adminProfile.isVerified || true // Default admin to verified if not specified
+                         isVerified: adminProfile.isVerified || true // Assume admin is verified if not specified
                      });
                  } catch (e) {
                       console.error("Failed to parse admin profile", e);
                       // Fallback if parsing fails
                       setAdminDetails({
-                          photoURL: "https://picsum.photos/id/10/32/32",
+                          photoURL: `https://picsum.photos/seed/${ADMIN_ID}/32/32`,
                           displayName: "Admin",
                           isVerified: true
                       });
@@ -92,7 +99,7 @@ const ChatPage = () => {
              } else {
                  // Fallback if no admin profile in localStorage
                  setAdminDetails({
-                     photoURL: "https://picsum.photos/id/10/32/32",
+                     photoURL: `https://picsum.photos/seed/${ADMIN_ID}/32/32`,
                      displayName: "Admin",
                      isVerified: true
                  });
@@ -104,6 +111,7 @@ const ChatPage = () => {
 
     const getChatId = useCallback((userId: string | undefined) => {
         if (!userId) return null; // Return null if userId is undefined
+        // Ensure consistent chat ID ordering
         return userId < ADMIN_ID ? `${userId}_${ADMIN_ID}` : `${ADMIN_ID}_${userId}`;
     }, []);
 
@@ -128,10 +136,14 @@ const ChatPage = () => {
             const unsubscribe = onSnapshot(q, (querySnapshot) => {
                 const msgs = querySnapshot.docs.map(doc => {
                      const data = doc.data();
-                     // Add senderIsVerified based on senderId
-                     const senderIsVerified = data.senderId === ADMIN_ID
-                        ? adminDetails.isVerified
-                        : (data.senderId === user.uid ? userIsVerified : false); // Fallback for safety
+                     // Determine sender's verification status based on senderId
+                     let senderIsVerified = false;
+                     if (data.senderId === ADMIN_ID) {
+                         senderIsVerified = adminDetails.isVerified;
+                     } else if (data.senderId === user.uid) {
+                         senderIsVerified = userIsVerified;
+                     }
+                     // If senderId is neither admin nor current user, verification is false (or fetch if needed)
 
                     return {
                         id: doc.id,
@@ -140,7 +152,7 @@ const ChatPage = () => {
                     } as Message;
                 });
                 setMessages(msgs);
-                 setTimeout(scrollToBottom, 100); // Increased delay slightly
+                 setTimeout(scrollToBottom, 100); // Scroll after messages update
             }, (error) => {
                 console.error("Error fetching messages: ", error);
                 toast({
@@ -264,13 +276,13 @@ const ChatPage = () => {
         <div className="container mx-auto p-4 flex flex-col h-[calc(100vh-8rem)] bg-secondary/30 rounded-lg shadow-md neumorphic">
             {/* Chat Header */}
              <div className="border-b p-4 bg-secondary rounded-t-lg flex items-center">
-                <Avatar className="h-8 w-8 mr-3">
+                <Avatar className="h-8 w-8 mr-3 flex-shrink-0">
                    <AvatarImage src={adminDetails.photoURL} data-ai-hint="admin avatar chat"/>
                    <AvatarFallback>{adminDetails.displayName.substring(0,1)}</AvatarFallback>
                 </Avatar>
-                <h1 className="text-xl font-semibold text-secondary-foreground flex items-center">
-                    {adminDetails.displayName}
-                    {adminDetails.isVerified && <CheckCircle2 className="ml-1.5 h-4 w-4 text-blue-500" />} {/* Blue tick for admin */}
+                <h1 className="text-xl font-semibold text-secondary-foreground flex items-center flex-shrink min-w-0"> {/* Allow shrinking */}
+                    <span className="truncate">{adminDetails.displayName}</span> {/* Truncate long names */}
+                    {adminDetails.isVerified && <CheckCircle2 className="ml-1.5 h-4 w-4 text-blue-500 flex-shrink-0" />} {/* Blue tick for admin */}
                 </h1>
             </div>
 
@@ -296,9 +308,9 @@ const ChatPage = () => {
                                 }`}
                              >
                                 {/* Sender Name and Verification */}
-                                <p className={`text-xs font-semibold mb-1 flex items-center ${msg.senderId === user.uid ? 'text-right' : 'text-left'}`}>
+                                <p className={`text-xs font-semibold mb-1 flex items-center ${msg.senderId === user.uid ? 'justify-end' : 'justify-start'}`}>
                                     {msg.senderDisplayName || 'User'}
-                                    {msg.senderIsVerified && <CheckCircle2 className="ml-1 h-3 w-3 text-blue-500" />} {/* Blue tick */}
+                                    {msg.senderIsVerified && <CheckCircle2 className="ml-1 h-3 w-3 text-blue-500 flex-shrink-0" />} {/* Blue tick */}
                                 </p>
 
                                 {msg.text && <p className="text-sm break-words">{msg.text}</p>}
@@ -310,6 +322,7 @@ const ChatPage = () => {
                                                 alt={msg.fileName || 'Uploaded image'}
                                                 className="max-w-full h-auto rounded max-h-60 cursor-pointer border"
                                                 data-ai-hint="chat image file"
+                                                loading="lazy" // Lazy load images
                                             />
                                          </a>
                                     ) : (
@@ -318,10 +331,10 @@ const ChatPage = () => {
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             download={msg.fileName}
-                                            className="mt-2 flex items-center text-sm underline hover:text-primary"
+                                            className="mt-2 flex items-center text-sm underline hover:text-primary break-all" // Allow link to break
                                         >
-                                            <FileIcon className="h-4 w-4 mr-1" />
-                                            {msg.fileName || 'Download File'}
+                                            <FileIcon className="h-4 w-4 mr-1 flex-shrink-0" />
+                                            <span className="truncate">{msg.fileName || 'Download File'}</span> {/* Truncate long names */}
                                         </a>
                                     )
                                 )}

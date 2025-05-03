@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, {useEffect, useState} from 'react';
@@ -59,7 +60,7 @@ const ViewNotePage = () => {
              if(userProfileRaw) {
                try {
                  const userProfile = JSON.parse(userProfileRaw);
-                 // Assuming uploader name matches fullName in profile
+                 // Assuming uploader name matches fullName in profile (fragile)
                  if (userProfile.fullName === foundNote.uploader) {
                    uploaderIsVerified = userProfile.isVerified || false;
                  }
@@ -109,7 +110,9 @@ const ViewNotePage = () => {
   };
 
   const updateUrl = (newIndex: number) => {
-     router.replace(`/view-note?id=${noteId}&category=${category}&fileIndex=${newIndex}`, { scroll: false });
+     // Ensure category is a string and encode it properly
+     const encodedCategory = typeof category === 'string' ? encodeURIComponent(category) : '';
+     router.replace(`/view-note?id=${noteId}&category=${encodedCategory}&fileIndex=${newIndex}`, { scroll: false });
   };
 
 
@@ -141,6 +144,7 @@ const ViewNotePage = () => {
 
   const file = note.files && note.files.length > currentFileIndex ? note.files[currentFileIndex] : null;
   const baseFileName = note.title ? note.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() : `note_${note.id}`;
+  // Ensure file exists before trying to get extension
   const fileExtension = file ? getFileExtension(file.type) : 'bin';
   const fileName = `${baseFileName}_${currentFileIndex + 1}.${fileExtension}`;
 
@@ -155,16 +159,18 @@ const ViewNotePage = () => {
     <div className="container mx-auto p-6">
       <Card className="mb-4 neumorphic bg-card shadow-lg rounded-lg overflow-hidden">
         <CardHeader className="flex flex-row items-center p-4 border-b bg-muted/30">
-          <Avatar className="mr-4 h-10 w-10">
+          <Avatar className="mr-4 h-10 w-10 flex-shrink-0">
             <AvatarImage src={`https://picsum.photos/seed/${note.uploader}/40/40`} alt={note.uploader || 'Uploader'} data-ai-hint="user avatar"/>
             <AvatarFallback>{note.uploader ? note.uploader.substring(0, 2).toUpperCase() : '??'}</AvatarFallback>
           </Avatar>
-          <div className="flex-1">
-            <CardTitle className="text-xl">{note.title || 'Untitled Note'}</CardTitle>
-            <CardDescription className="text-xs flex items-center">
-              Uploaded by {note.uploader || 'Unknown User'}
-              {note.uploaderIsVerified && <CheckCircle2 className="ml-1 h-3 w-3 text-blue-500" />} {/* Blue tick */}
-              {' on '} {format(new Date(note.timestamp), 'PPp')}
+          <div className="flex-1 min-w-0"> {/* Ensure flex-1 has min-width */}
+            <CardTitle className="text-xl truncate">{note.title || 'Untitled Note'}</CardTitle> {/* Truncate long titles */}
+            <CardDescription className="text-xs flex items-center flex-wrap"> {/* Allow wrapping */}
+              Uploaded by&nbsp;
+              <span className="font-medium">{note.uploader || 'Unknown User'}</span>
+              {note.uploaderIsVerified && <CheckCircle2 className="ml-1 h-3 w-3 text-blue-500 flex-shrink-0" />} {/* Blue tick */}
+              <span className="mx-1">&middot;</span>
+              {format(new Date(note.timestamp), 'MMM d, yyyy, p')} {/* Adjusted date format */}
             </CardDescription>
           </div>
         </CardHeader>
@@ -199,6 +205,7 @@ const ViewNotePage = () => {
                         className="max-w-full max-h-full h-auto object-contain cursor-pointer"
                         onClick={() => handlePreviewClick(file.url)}
                         data-ai-hint="note image content"
+                        loading="lazy" // Added lazy loading
                       />
                       <Button
                         variant="ghost"
@@ -296,7 +303,8 @@ const ViewNotePage = () => {
                {/* Download Button - Positioned at bottom right */}
                <a
                  href={previewImageUrl}
-                 download={fileName}
+                 // Use a generic name or derive from file if possible
+                 download={fileName || 'downloaded_image'}
                  className="absolute bottom-4 right-4 z-50"
                >
                  <Button variant="default" size="icon" className="bg-primary/80 text-primary-foreground hover:bg-primary rounded-full shadow-lg" title="Download Image">
