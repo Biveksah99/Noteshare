@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { db, storage, auth } from '@/lib/firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, Timestamp, doc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { useAuthState } from 'react-firebase-hooks/auth';
+import { useAuthState } from 'react-firebase-hooks/auth'; // Correct import path for v5
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -33,22 +33,6 @@ interface Message {
 // Assume admin details are fetched or predefined
 // Fetching admin details including verification status
 const ADMIN_ID = "adminUserId"; // Replace with actual admin ID
-const [adminDetails, setAdminDetails] = useState<{ photoURL: string; displayName: string; isVerified: boolean } | null>(null);
-
-useEffect(() => {
-    // Example: Fetch admin details (replace with your actual fetching logic)
-    const fetchAdminDetails = async () => {
-        // Simulating fetching admin data
-        // In a real app, fetch from Firestore or your backend
-        setAdminDetails({
-            photoURL: "https://picsum.photos/id/10/32/32", // Placeholder
-            displayName: "Admin", // Placeholder
-            isVerified: true // Assuming admin is always verified
-        });
-    };
-    fetchAdminDetails();
-}, []);
-
 
 const ChatPage = () => {
     const [messages, setMessages] = useState<Message[]>([]);
@@ -59,6 +43,8 @@ const ChatPage = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
     const [userIsVerified, setUserIsVerified] = useState<boolean>(false); // State for current user's verification
+    const [adminDetails, setAdminDetails] = useState<{ photoURL: string; displayName: string; isVerified: boolean } | null>(null);
+
 
     // Fetch current user's verification status
      useEffect(() => {
@@ -67,7 +53,8 @@ const ChatPage = () => {
             if (profile) {
                 try {
                     const parsedProfile = JSON.parse(profile);
-                    if(parsedProfile.fullName === user.displayName) { // Basic check
+                    // Simple check using email (or UID if profile stores it)
+                    if(parsedProfile.email === user.email) {
                          setUserIsVerified(parsedProfile.isVerified || false);
                     }
                 } catch (e) {
@@ -77,8 +64,46 @@ const ChatPage = () => {
         }
      }, [user]);
 
+    useEffect(() => {
+        // Example: Fetch admin details (replace with your actual fetching logic)
+        const fetchAdminDetails = async () => {
+            // Simulating fetching admin data
+            // In a real app, fetch from Firestore or your backend
+            // For demo, using localStorage similar to user profile
+             const adminProfileRaw = localStorage.getItem('adminUserProfile'); // Assuming a separate key for admin
+             if (adminProfileRaw) {
+                 try {
+                     const adminProfile = JSON.parse(adminProfileRaw);
+                     // Assuming the admin profile has similar structure
+                     setAdminDetails({
+                         photoURL: adminProfile.profileImage || "https://picsum.photos/id/10/32/32", // Placeholder
+                         displayName: adminProfile.fullName || "Admin", // Placeholder
+                         isVerified: adminProfile.isVerified || true // Default admin to verified if not specified
+                     });
+                 } catch (e) {
+                      console.error("Failed to parse admin profile", e);
+                      // Fallback if parsing fails
+                      setAdminDetails({
+                          photoURL: "https://picsum.photos/id/10/32/32",
+                          displayName: "Admin",
+                          isVerified: true
+                      });
+                 }
+             } else {
+                 // Fallback if no admin profile in localStorage
+                 setAdminDetails({
+                     photoURL: "https://picsum.photos/id/10/32/32",
+                     displayName: "Admin",
+                     isVerified: true
+                 });
+             }
+        };
+        fetchAdminDetails();
+    }, []);
 
-    const getChatId = useCallback((userId: string) => {
+
+    const getChatId = useCallback((userId: string | undefined) => {
+        if (!userId) return null; // Return null if userId is undefined
         return userId < ADMIN_ID ? `${userId}_${ADMIN_ID}` : `${ADMIN_ID}_${userId}`;
     }, []);
 
@@ -95,6 +120,8 @@ const ChatPage = () => {
     useEffect(() => {
         if (user && adminDetails) { // Ensure admin details are loaded
             const chatId = getChatId(user.uid);
+            if (!chatId) return; // Don't proceed if chatId is null
+
             const messagesRef = collection(db, 'chats', chatId, 'messages');
             const q = query(messagesRef, orderBy('timestamp', 'asc'));
 
@@ -132,6 +159,10 @@ const ChatPage = () => {
         if (!newMessage.trim() || !user) return;
 
         const chatId = getChatId(user.uid);
+         if (!chatId) {
+            toast({ variant: "destructive", title: "Error", description: "Cannot determine chat ID." });
+            return;
+         }
         const messagesRef = collection(db, 'chats', chatId, 'messages');
 
         try {
@@ -142,7 +173,7 @@ const ChatPage = () => {
                 timestamp: serverTimestamp(),
                 senderPhotoURL: user.photoURL,
                 senderDisplayName: user.displayName,
-                // senderIsVerified: userIsVerified // Include verification status when sending
+                senderIsVerified: userIsVerified // Include verification status when sending
             });
             setNewMessage('');
             // scrollToBottom(); // Let useEffect handle scrolling on message update
@@ -162,6 +193,11 @@ const ChatPage = () => {
 
         setUploading(true);
         const chatId = getChatId(user.uid);
+        if (!chatId) {
+            toast({ variant: "destructive", title: "Error", description: "Cannot determine chat ID." });
+            setUploading(false);
+            return;
+        }
         const filePath = `chats/${chatId}/${user.uid}/${Date.now()}_${file.name}`;
         const storageRef = ref(storage, filePath);
 
@@ -179,7 +215,7 @@ const ChatPage = () => {
                 fileType: file.type,
                 senderPhotoURL: user.photoURL,
                 senderDisplayName: user.displayName,
-                // senderIsVerified: userIsVerified // Include verification status when sending file
+                senderIsVerified: userIsVerified // Include verification status when sending file
             });
             // scrollToBottom(); // Let useEffect handle scrolling
         } catch (error) {
@@ -229,7 +265,7 @@ const ChatPage = () => {
             {/* Chat Header */}
              <div className="border-b p-4 bg-secondary rounded-t-lg flex items-center">
                 <Avatar className="h-8 w-8 mr-3">
-                   <AvatarImage src={adminDetails.photoURL} />
+                   <AvatarImage src={adminDetails.photoURL} data-ai-hint="admin avatar chat"/>
                    <AvatarFallback>{adminDetails.displayName.substring(0,1)}</AvatarFallback>
                 </Avatar>
                 <h1 className="text-xl font-semibold text-secondary-foreground flex items-center">
@@ -249,7 +285,7 @@ const ChatPage = () => {
                             className={`flex items-start max-w-xs md:max-w-md lg:max-w-lg ${msg.senderId === user.uid ? 'flex-row-reverse' : ''}`}
                         >
                              <Avatar className={`h-6 w-6 ${msg.senderId === user.uid ? 'ml-2' : 'mr-2'} self-end flex-shrink-0`}>
-                                <AvatarImage src={msg.senderPhotoURL || undefined} />
+                                <AvatarImage src={msg.senderPhotoURL || undefined} data-ai-hint="chat user avatar small" />
                                 <AvatarFallback>{msg.senderDisplayName ? msg.senderDisplayName.substring(0, 1).toUpperCase() : '?'}</AvatarFallback>
                             </Avatar>
                             <div
@@ -273,6 +309,7 @@ const ChatPage = () => {
                                                 src={msg.fileUrl}
                                                 alt={msg.fileName || 'Uploaded image'}
                                                 className="max-w-full h-auto rounded max-h-60 cursor-pointer border"
+                                                data-ai-hint="chat image file"
                                             />
                                          </a>
                                     ) : (
@@ -327,6 +364,3 @@ const ChatPage = () => {
 };
 
 export default ChatPage;
-
-
-    

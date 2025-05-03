@@ -198,6 +198,7 @@ const ViewNotePage = () => {
                         alt={`${note.title || 'Note'} - File ${currentFileIndex + 1}`}
                         className="max-w-full max-h-full h-auto object-contain cursor-pointer"
                         onClick={() => handlePreviewClick(file.url)}
+                        data-ai-hint="note image content"
                       />
                       <Button
                         variant="ghost"
@@ -290,6 +291,7 @@ const ViewNotePage = () => {
                 alt="Preview"
                 className="block max-w-full max-h-full object-contain" // Use max-w/max-h for contain effect
                 style={{ maxWidth: 'calc(95vw - 4rem)', maxHeight: 'calc(95vh - 4rem)' }}
+                data-ai-hint="preview image fullscreen"
               />
                {/* Download Button - Positioned at bottom right */}
                <a
@@ -310,5 +312,3 @@ const ViewNotePage = () => {
 };
 
 export default ViewNotePage;
-
-    

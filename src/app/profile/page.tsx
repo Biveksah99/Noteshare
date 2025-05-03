@@ -120,7 +120,7 @@ const ProfilePage = () => {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const [openEditDialog, setOpenEditDialog] = useState(false)
-  const [profileImage, setProfileImage] = useState<string | null>("https://picsum.photos/id/237/200/300"); // Default image
+  const [profileImage, setProfileImage] = useState<string | null>(null); // Initialize as null
   const [isCropDialogOpen, setIsCropDialogOpen] = useState(false);
   const [newProfileImageSrc, setNewProfileImageSrc] = useState<string | null>(null); // Source for cropper
   const [crop, setCrop] = useState<CropType>();
@@ -139,13 +139,13 @@ const ProfilePage = () => {
       return { values: result.data, errors: {} };
     },
     defaultValues: {
-      fullName: "Noah Trevor", // Example data matching the image
-      email: "noah.t@gmail.com", // Ensure default is valid gmail
-      gender: "Male",
-      contactNumber: "08011985867453",
-      address: "South Africa",
-      section: "CIT (400 Level)",
-      bio: "Passionate about sharing knowledge and helping others learn.",
+      fullName: "", // Start with empty or placeholder values
+      email: "",
+      gender: undefined,
+      contactNumber: "",
+      address: "",
+      section: "",
+      bio: "",
       isVerified: false, // Default verification status
     },
   })
@@ -156,13 +156,23 @@ const ProfilePage = () => {
     if (savedProfile) {
       try {
         const profileData = JSON.parse(savedProfile);
-        form.reset(profileData); // Update form with saved data
+        // Ensure default values are handled if fields are missing
+        const defaults = form.formState.defaultValues;
+        form.reset({ ...defaults, ...profileData }); // Update form with saved data, keeping defaults for missing fields
         if (profileData.profileImage) {
             setProfileImage(profileData.profileImage);
+        } else {
+           // Set a default image if none is saved
+           setProfileImage("https://picsum.photos/id/237/200/300");
         }
       } catch (error) {
         console.error("Failed to parse profile data from localStorage", error);
+        // Set default image if loading fails
+        setProfileImage("https://picsum.photos/id/237/200/300");
       }
+    } else {
+        // Set default image if no profile exists
+        setProfileImage("https://picsum.photos/id/237/200/300");
     }
   }, [form]);
 
@@ -282,7 +292,7 @@ const ProfilePage = () => {
     <div className="container mx-auto p-6">
        <div className="flex justify-between items-center border-b pb-2 mb-6"> {/* Increased margin-bottom */}
           <h1 className="text-2xl font-semibold flex items-center">
-            Viewing {currentValues.fullName}'s profile
+            Viewing {currentValues.fullName || "User"}'s profile
             {currentValues.isVerified && <CheckCircle2 className="ml-2 h-5 w-5 text-blue-500" />} {/* Blue tick */}
           </h1>
           <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
@@ -435,7 +445,7 @@ const ProfilePage = () => {
            <Label htmlFor="profile-image-upload" className="cursor-pointer relative group">
               <Avatar className="h-40 w-40 border-2 border-muted p-1 neumorphic"> {/* Increased size */}
                  {/* Add placeholder if no image */}
-                 <AvatarImage src={profileImage || undefined} alt={currentValues.fullName} />
+                 <AvatarImage src={profileImage || undefined} alt={currentValues.fullName || "User"} data-ai-hint="user avatar profile"/>
                  <AvatarFallback className="bg-secondary">
                     <UserIcon className="h-20 w-20 text-muted-foreground" /> {/* Increased icon size */}
                  </AvatarFallback>
@@ -459,16 +469,16 @@ const ProfilePage = () => {
         <div className="w-full md:w-3/4 border rounded-md p-4 neumorphic bg-card">
           <ProfileDetail label="Full Name">
              <span className="text-sm text-muted-foreground flex items-center">
-                {currentValues.fullName}
+                {currentValues.fullName || 'N/A'}
                 {currentValues.isVerified && <CheckCircle2 className="ml-1 h-4 w-4 text-blue-500" />} {/* Blue tick */}
              </span>
           </ProfileDetail>
-          <ProfileDetail label="Email" value={currentValues.email} />
-          <ProfileDetail label="Gender" value={currentValues.gender} />
-          <ProfileDetail label="Phone" value={currentValues.contactNumber} />
-          <ProfileDetail label="Address" value={currentValues.address} />
+          <ProfileDetail label="Email" value={currentValues.email || 'N/A'} />
+          <ProfileDetail label="Gender" value={currentValues.gender || 'N/A'} />
+          <ProfileDetail label="Phone" value={currentValues.contactNumber || 'N/A'} />
+          <ProfileDetail label="Address" value={currentValues.address || 'N/A'} />
           <Separator className="my-2"/> {/* Separator like in image */}
-          <ProfileDetail label="Classroom" value={currentValues.section} />
+          <ProfileDetail label="Classroom" value={currentValues.section || 'N/A'} />
 
           {/* Optional Bio Display */}
           {currentValues.bio && (
@@ -528,5 +538,3 @@ const ProfilePage = () => {
 }
 
 export default ProfilePage
-
-    

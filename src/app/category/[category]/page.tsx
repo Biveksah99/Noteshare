@@ -90,6 +90,7 @@ const CategoryDetailPage = () => {
              alt="Note preview"
              className="w-full h-full object-cover"
              loading="lazy" // Add lazy loading
+             data-ai-hint="note preview image"
            />
             {files.length > 1 && (
                 <span className="absolute bottom-1 right-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
@@ -151,5 +152,3 @@ const CategoryDetailPage = () => {
 };
 
 export default CategoryDetailPage;
-
-    

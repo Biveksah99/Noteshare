@@ -84,10 +84,15 @@ const Home = () => {
                });
             }
           } catch (e) {
-            console.warn(`Failed to parse item from localStorage for key ${key}. It may not be a valid JSON object; skipping.`, e);
+            // Gracefully handle non-JSON items in localStorage
+            if (!(e instanceof SyntaxError)) {
+              console.error(`Failed to process item from localStorage for key ${key}.`, e);
+            } else {
+              // console.warn(`Item with key ${key} is not valid JSON, skipping.`);
+            }
           }
         } else {
-          console.warn(`Item with key ${key} is not a string or is null, skipping. Value:`, item);
+          // console.warn(`Item with key ${key} is not a string or is null, skipping.`);
         }
       } catch (e) {
         console.error("Failed to retrieve or process item from localStorage", e);
@@ -207,6 +212,3 @@ const Home = () => {
 };
 
 export default Home;
-
-
-    
