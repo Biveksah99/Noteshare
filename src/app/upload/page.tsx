@@ -18,7 +18,7 @@ import { File as FileIcon } from "lucide-react"; // Renamed to avoid conflict wi
 import { auth } from '@/lib/firebase'; // Import auth
 import { useAuthState } from 'react-firebase-hooks/auth'; // Import useAuthState
 
-// Updated schema: Use z.any() and refine for file-like objects
+// Updated schema: Use z.instanceof(File) for robust validation
 const formSchema = z.object({
   category: z.string().min(1, {
     message: "Category must be selected.",
@@ -33,13 +33,10 @@ const formSchema = z.object({
   description: z.string().min(10, {
     message: "Description must be at least 10 characters.",
   }),
-  // Use z.any() and refine the check for file-like properties
-  files: z.array(z.any())
+  // Use z.instanceof(File) for better type checking
+  files: z.array(z.instanceof(File))
     .min(1, { message: "Please upload at least one file." })
-    .refine(
-      (files) => files.every((file) => typeof file === 'object' && file !== null && 'name' in file && 'size' in file && 'type' in file),
-      { message: "Invalid file type detected." }
-    )
+    // The instanceof check replaces the need for manual refinement
 })
 
 type FormValues = z.infer<typeof formSchema>;
@@ -75,6 +72,8 @@ const UploadPage = () => {
       const result = formSchema.safeParse(data);
       if (!result.success) {
         console.error("Validation failed:", result.error.flatten().fieldErrors);
+        // Log the raw error object for more details if flatten doesn't work as expected
+        console.error("Raw Zod error:", result.error);
         return { values: {}, errors: result.error.flatten().fieldErrors };
       }
        console.log("Validation successful:", result.data);
@@ -128,7 +127,7 @@ const UploadPage = () => {
 
     const fileData = [];
     // Ensure values.files is treated as an array of File objects
-    const filesToProcess: File[] = values.files as File[];
+    const filesToProcess: File[] = values.files; // Already validated as File[] by zod
 
     for (const file of filesToProcess) {
       try {
@@ -221,19 +220,24 @@ const UploadPage = () => {
     console.log("Files selected:", files);
     // Allow adding more files to the existing selection
     const currentFiles = form.getValues("files") || [];
-    const combinedFiles = [...currentFiles, ...files] as File[]; // Combine and ensure type
+    // Filter out any non-File objects just in case (though schema should handle it)
+    const currentValidFiles = currentFiles.filter(f => f instanceof File);
+    const combinedFiles = [...currentValidFiles, ...files]; // Combine and ensure type
     console.log("Combined files:", combinedFiles);
 
     setUploadedFiles(combinedFiles); // Update state with the combined list
-    form.setValue("files", combinedFiles, { shouldValidate: true }); // Update form's files array and trigger validation
+    // Update form's files array and trigger validation
+    // Use `combinedFiles` which is already asserted/filtered as File[]
+    form.setValue("files", combinedFiles, { shouldValidate: true });
   };
+
 
   // Function to remove a file
   const removeFile = (indexToRemove: number) => {
     const currentFiles = form.getValues("files") || [];
     const updatedFiles = currentFiles.filter((_, index) => index !== indexToRemove);
     console.log("Files after removal:", updatedFiles);
-    setUploadedFiles(updatedFiles as File[]); // Update state
+    setUploadedFiles(updatedFiles); // Update state
     form.setValue("files", updatedFiles, { shouldValidate: true }); // Update form and trigger validation
   };
 
@@ -383,4 +387,4 @@ const UploadPage = () => {
 }
 
 export default UploadPage
-
+    
