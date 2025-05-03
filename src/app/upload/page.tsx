@@ -14,7 +14,7 @@ import {useState, useEffect} from "react"
 import {useForm} from "react-hook-form"
 import * as z from "zod"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
-import { File as FileIcon } from "lucide-react"; // Renamed to avoid conflict with File type
+import { File as FileIcon, UploadCloud } from "lucide-react"; // Added UploadCloud icon
 import { auth } from '@/lib/firebase'; // Import auth
 import { useAuthState } from 'react-firebase-hooks/auth'; // Import useAuthState
 
@@ -33,9 +33,18 @@ const formSchema = z.object({
   description: z.string().min(10, {
     message: "Description must be at least 10 characters.",
   }),
-  // Use z.instanceof(File) for better type checking
+  // Use z.array(z.instanceof(File)) for multiple files
   files: z.array(z.instanceof(File))
     .min(1, { message: "Please upload at least one file." })
+    // Ensure it's an array of File objects. This should work if the input provides File objects.
+    // z.instanceof(File) might not work reliably across environments, let's use a custom check
+    // .refine((files) => files.every(file => file instanceof File), {
+    //   message: "Expected an array of files.", // Additional check
+    // }),
+    // More reliable check using typeof and name
+    .refine((files) => files.every(file => typeof file === 'object' && file !== null && 'name' in file && 'size' in file && 'type' in file), {
+       message: "Expected an array of file-like objects.",
+     }),
 })
 
 type FormValues = z.infer<typeof formSchema>;
@@ -68,11 +77,18 @@ const UploadPage = () => {
     resolver: async (data, context, options) => {
       // Use Zod resolver
       console.log("Validating data:", data);
-      const result = formSchema.safeParse(data);
+       // Ensure files is always an array before validation
+       // The custom refine in the schema should handle the check, but this is a safeguard
+      const dataToValidate = {
+         ...data,
+         files: Array.isArray(data.files) ? data.files.filter(f => typeof f === 'object' && f !== null) : [],
+      };
+
+      const result = formSchema.safeParse(dataToValidate);
       if (!result.success) {
+        console.error("Validation failed:", result.error.flatten().fieldErrors);
         // Log the raw error object for more details if flatten doesn't work as expected
         console.error("Raw Zod error:", result.error);
-        console.error("Flattened field errors:", result.error.flatten().fieldErrors); // Keep this too
         return { values: {}, errors: result.error.flatten().fieldErrors };
       }
        console.log("Validation successful:", result.data);
@@ -82,7 +98,7 @@ const UploadPage = () => {
       category: "",
       title: "",
       description: "",
-      files: []
+      files: [] // Initialize with an empty array
     },
   })
 
@@ -126,9 +142,27 @@ const UploadPage = () => {
 
     const fileData = [];
     // Ensure values.files is treated as an array of File objects
-    const filesToProcess: File[] = values.files; // Already validated as File[] by zod
+    // If validation passed, values.files should already be File[]
+    const filesToProcess: File[] = Array.isArray(values.files) ? values.files : [];
+
+    if (filesToProcess.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "No Files",
+          description: "Please select at least one file to upload.",
+        });
+        setIsLoading(false);
+        return;
+    }
+
 
     for (const file of filesToProcess) {
+        // Double-check if it's a File object before processing
+        // Using a more robust check since instanceof might fail
+         if (!(typeof file === 'object' && file !== null && 'name' in file && 'size' in file && 'type' in file)) {
+            console.warn("Skipping non-File item:", file);
+            continue;
+        }
       try {
           console.log(`Processing file: ${file.name}`);
           const fileDataUrl = await new Promise<string>((resolve, reject) => {
@@ -219,24 +253,26 @@ const UploadPage = () => {
     console.log("Files selected:", files);
     // Allow adding more files to the existing selection
     const currentFiles = form.getValues("files") || [];
-    // Filter out any non-File objects just in case (though schema should handle it)
-    // Ensure currentFiles is an array before filtering
-     const currentValidFiles = Array.isArray(currentFiles) ? currentFiles.filter(f => f instanceof File) : [];
+    // Filter out any non-File objects just in case
+    const currentValidFiles = Array.isArray(currentFiles) ? currentFiles.filter(f => typeof f === 'object' && f !== null) : [];
 
-    const combinedFiles = [...currentValidFiles, ...files]; // Combine and ensure type
+    const combinedFiles = [...currentValidFiles, ...files]; // Combine
     console.log("Combined files:", combinedFiles);
 
     setUploadedFiles(combinedFiles); // Update state with the combined list
     // Update form's files array and trigger validation
-    // Use `combinedFiles` which is already asserted/filtered as File[]
     form.setValue("files", combinedFiles, { shouldValidate: true });
+
+    // Clear the input value to allow selecting the same file again if needed
+    if (e.target) {
+      e.target.value = '';
+    }
   };
 
 
   // Function to remove a file
   const removeFile = (indexToRemove: number) => {
     const currentFiles = form.getValues("files") || [];
-     // Ensure currentFiles is an array before filtering
     const updatedFiles = Array.isArray(currentFiles) ? currentFiles.filter((_, index) => index !== indexToRemove) : [];
     console.log("Files after removal:", updatedFiles);
     setUploadedFiles(updatedFiles); // Update state
@@ -290,7 +326,7 @@ const UploadPage = () => {
                   <FormItem>
                     <FormLabel>Title</FormLabel>
                     <FormControl>
-                      <Input placeholder="Give your notes a descriptive title." {...field} />
+                      <Input placeholder="Give your notes a descriptive title." {...field} maxLength={200}/>
                     </FormControl>
                     <FormDescription>
                        Max 200 characters (approx. 40 words).
@@ -323,13 +359,24 @@ const UploadPage = () => {
              <FormField
                 control={form.control}
                 name="files"
-                render={({ fieldState }) => ( // Use fieldState to check for errors
+                render={({ fieldState }) => (
                   <FormItem>
-                    <FormLabel>Upload Files</FormLabel>
+                    {/* Wrap the label and description in a clickable label */}
+                    <Label htmlFor="file-upload-input" className="cursor-pointer">
+                      <div className="border-2 border-dashed border-muted-foreground/50 rounded-md p-6 text-center hover:border-accent transition-colors">
+                          <UploadCloud className="mx-auto h-12 w-12 text-muted-foreground" />
+                          <p className="mt-2 text-sm font-medium text-foreground">
+                            Click to upload files
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            PDF, Word, PPT, Images allowed. Add multiple files.
+                          </p>
+                      </div>
+                    </Label>
                     <FormControl>
-                      {/* Hidden input triggered by a button */}
+                      {/* Hidden input remains the same */}
                        <Input
-                          id="file-upload-input"
+                          id="file-upload-input" // ID matches the label's htmlFor
                           type="file"
                           multiple
                           onChange={handleFileChange}
@@ -337,32 +384,31 @@ const UploadPage = () => {
                           accept=".pdf,.doc,.docx,.ppt,.pptx,image/*" // Specify accepted types
                        />
                     </FormControl>
-                     {/* Custom Button to trigger file input */}
-                     <Button type="button" variant="outline" onClick={() => document.getElementById('file-upload-input')?.click()}>
-                       <FileIcon className="mr-2 h-4 w-4" /> Add Files
-                     </Button>
-                    <FormDescription>
+                    {/* Remove the separate "Add Files" button */}
+                    {/* <FormDescription>
                       Supported files: PDF, Word, PPT, Images. You can add multiple files.
-                    </FormDescription>
+                    </FormDescription> */}
                     {/* Display error message if validation fails */}
                     {fieldState.error && <FormMessage>{fieldState.error.message}</FormMessage>}
+
                     {/* Display list of uploaded files with remove button */}
                      {uploadedFiles.length > 0 && (
                       <div className="mt-4 space-y-2">
                         <h4 className="text-sm font-medium">Selected Files:</h4>
-                        <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground max-h-32 overflow-y-auto border rounded-md p-2">
                           {uploadedFiles.map((file, index) => (
                             <li key={index} className="flex items-center justify-between">
-                              <span className="truncate mr-2">
-                                <FileIcon className="h-4 w-4 inline mr-1" />
-                                {file.name} ({ (file.size / 1024).toFixed(1) } KB)
+                              <span className="truncate mr-2 flex items-center">
+                                <FileIcon className="h-4 w-4 inline mr-1.5 flex-shrink-0" />
+                                {file.name} <span className="text-xs ml-1">({ (file.size / 1024).toFixed(1) } KB)</span>
                               </span>
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => removeFile(index)}
-                                className="text-destructive hover:text-destructive/80 h-auto p-1"
+                                className="text-destructive hover:text-destructive/80 h-auto p-1 ml-2 flex-shrink-0" // Added margin
+                                aria-label={`Remove ${file.name}`}
                               >
                                 Remove
                               </Button>
@@ -376,8 +422,8 @@ const UploadPage = () => {
               />
               {/* Moved Button inside the form element */}
               <CardFooter className="pt-4"> {/* Add padding top */}
-                <Button type="submit" className={cn("ml-auto bg-accent text-accent-foreground", isLoading && "cursor-not-allowed opacity-50")} disabled={isLoading || uploadedFiles.length === 0}>
-                  {isLoading ? "Uploading..." : "Upload"}
+                <Button type="submit" className={cn("w-full bg-accent text-accent-foreground shadow-md hover:bg-accent/90 neumorphic", isLoading && "cursor-not-allowed opacity-50")} disabled={isLoading || uploadedFiles.length === 0}>
+                  {isLoading ? "Uploading..." : "Upload Material"}
                 </Button>
               </CardFooter>
             </form>
