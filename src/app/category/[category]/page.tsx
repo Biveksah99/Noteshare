@@ -136,8 +136,8 @@ const CategoryDetailPage = ({ params }: { params: { category: string } }) => {
                       <AvatarImage src={`https://picsum.photos/seed/${note.uploader}/20/20`} alt={note.uploader} data-ai-hint="user avatar tiny"/>
                       <AvatarFallback className="text-xs">{note.uploader.substring(0, 1)}</AvatarFallback>
                     </Avatar>
-                    <span className="font-medium">{note.uploader}</span>
-                    {note.uploaderIsVerified && <VerifiedBadge className="ml-1 h-3 w-3 flex-shrink-0" />} {/* Blue tick */}
+                    <span className="font-medium mr-0.5">{note.uploader}</span> {/* Add small margin */}
+                    {note.uploaderIsVerified && <VerifiedBadge className="h-3 w-3 flex-shrink-0" />} {/* Blue tick */}
                     <span className="mx-1">·</span>
                     {format(new Date(note.timestamp), 'MMM d, yyyy')}
                   </CardDescription>
@@ -162,3 +162,5 @@ const CategoryDetailPage = ({ params }: { params: { category: string } }) => {
 };
 
 export default CategoryDetailPage;
+
+    

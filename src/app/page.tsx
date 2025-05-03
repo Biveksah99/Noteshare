@@ -178,17 +178,17 @@ const Home = () => {
                   <Link key={upload.id} href={`/view-note?id=${upload.id}&category=${upload.category}`} className="block group">
                     <Card className="neumorphic h-full transition-shadow duration-200 group-hover:shadow-lg">
                       <CardHeader className="flex flex-row items-center space-x-3 p-4"> {/* Adjust padding */}
-                        <Avatar className="h-10 w-10">
+                        <Avatar className="h-10 w-10 flex-shrink-0"> {/* Prevent avatar shrinking */}
                           {/* Placeholder image - Consider fetching user's actual avatar */}
                           <AvatarImage src={`https://picsum.photos/seed/${upload.uploader}/40/40`} alt={upload.uploader} data-ai-hint="user avatar"/>
                           <AvatarFallback>{upload.uploader.substring(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0"> {/* Allow text content to shrink if needed */}
                           <CardTitle className="text-lg line-clamp-1">{upload.title}</CardTitle> {/* Ensure title doesn't wrap excessively */}
                           <CardDescription className="text-xs flex items-center flex-wrap"> {/* Allow wrapping for long names/dates */}
                              Uploaded by&nbsp;
-                             <span className="font-medium">{upload.uploader}</span>
-                             {upload.uploaderIsVerified && <VerifiedBadge className="ml-1 h-3 w-3 flex-shrink-0" />} {/* Blue tick */}
+                             <span className="font-medium mr-0.5">{upload.uploader}</span> {/* Add small margin */}
+                             {upload.uploaderIsVerified && <VerifiedBadge className="h-3 w-3 flex-shrink-0" />} {/* Blue tick */}
                              <span className="mx-1">&middot;</span>
                              {format(new Date(upload.timestamp), 'MMM d, yyyy')}
                           </CardDescription>
@@ -219,3 +219,5 @@ const Home = () => {
 };
 
 export default Home;
+
+    

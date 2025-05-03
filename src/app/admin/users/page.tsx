@@ -233,8 +233,8 @@ const AdminUsersPage = () => {
                                     filteredUsers.map((user) => (
                                         <TableRow key={user.id}>
                                             <TableCell className="font-medium flex items-center">
-                                                {user.fullName}
-                                                {user.isVerified && <VerifiedBadge className="ml-1.5 h-4 w-4 flex-shrink-0" />}
+                                                <span>{user.fullName}</span>
+                                                {user.isVerified && <VerifiedBadge className="ml-1.5 h-4 w-4 flex-shrink-0" />} {/* Adjusted margin */}
                                             </TableCell>
                                             <TableCell>{user.email || 'N/A'}</TableCell>
                                             <TableCell className="text-center">
@@ -273,3 +273,5 @@ const AdminUsersPage = () => {
 };
 
 export default AdminUsersPage;
+
+    

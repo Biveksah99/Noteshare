@@ -314,7 +314,7 @@ const ChatPage = () => {
                              >
                                 {/* Sender Name and Verification */}
                                 <p className={`text-xs font-semibold mb-1 flex items-center ${msg.senderId === user.uid ? 'justify-end' : 'justify-start'}`}>
-                                    {msg.senderDisplayName || 'User'}
+                                    <span>{msg.senderDisplayName || 'User'}</span>
                                     {msg.senderIsVerified && <VerifiedBadge className="ml-1 h-3 w-3 flex-shrink-0" />} {/* Blue tick */}
                                 </p>
 
@@ -382,3 +382,5 @@ const ChatPage = () => {
 };
 
 export default ChatPage;
+
+    

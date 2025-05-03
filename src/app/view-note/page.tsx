@@ -175,8 +175,8 @@ const ViewNotePage = () => {
             <CardTitle className="text-xl truncate">{note.title || 'Untitled Note'}</CardTitle> {/* Truncate long titles */}
             <CardDescription className="text-xs flex items-center flex-wrap"> {/* Allow wrapping */}
               Uploaded by&nbsp;
-              <span className="font-medium">{note.uploader || 'Unknown User'}</span>
-              {note.uploaderIsVerified && <VerifiedBadge className="ml-1 h-3 w-3 flex-shrink-0" />} {/* Blue tick */}
+              <span className="font-medium mr-0.5">{note.uploader || 'Unknown User'}</span> {/* Add small margin */}
+              {note.uploaderIsVerified && <VerifiedBadge className="h-3 w-3 flex-shrink-0" />} {/* Blue tick */}
               <span className="mx-1">&middot;</span>
               {format(new Date(note.timestamp), 'MMM d, yyyy, p')} {/* Adjusted date format */}
             </CardDescription>
@@ -330,3 +330,5 @@ const ViewNotePage = () => {
 };
 
 export default ViewNotePage;
+
+    
