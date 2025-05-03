@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Paperclip, Send, Image as ImageIcon, File as FileIcon } from 'lucide-react';
+import { Paperclip, Send, Image as ImageIcon, File as FileIcon, Users } from 'lucide-react'; // Added Users icon
 import { VerifiedBadge } from '@/components/ui/verified-badge'; // Import the new badge
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
@@ -21,7 +21,7 @@ interface Message {
     id: string;
     text?: string;
     senderId: string;
-    receiverId: string;
+    // receiverId is removed for group chat
     timestamp: Timestamp | null;
     fileUrl?: string;
     fileName?: string;
@@ -31,85 +31,78 @@ interface Message {
     senderIsVerified?: boolean; // Added sender verification status
 }
 
-// Assume admin details are fetched or predefined
-// Fetching admin details including verification status
-const ADMIN_ID = "adminUserId"; // Replace with actual admin ID
+// Define a fixed group chat ID
+const GROUP_CHAT_ID = "global_group_chat";
+
+// Interface for minimal user profile data to store with messages or fetch
+interface UserProfileInfo {
+    fullName?: string;
+    profileImage?: string | null;
+    isVerified?: boolean;
+}
+
+// Helper function to get user profile info (simplified - prefers localStorage)
+const getUserProfileInfo = async (userId: string): Promise<UserProfileInfo> => {
+    // Prioritize localStorage 'userProfile' if it matches the userId (e.g., by email or stored ID)
+    // In a real app, you'd likely fetch from Firestore for accuracy.
+    const profileRaw = localStorage.getItem('userProfile');
+    let profileData: UserProfileInfo = { fullName: 'User', profileImage: null, isVerified: false };
+
+    if (profileRaw) {
+        try {
+            const parsedProfile = JSON.parse(profileRaw);
+            // Match using user ID if available, otherwise try email (assuming user ID is stored in profile)
+            // Note: This demo relies on the current user's profile being the one in localStorage
+            // For other users, it would ideally fetch from Firestore.
+            if (auth.currentUser && auth.currentUser.uid === userId && parsedProfile.email === auth.currentUser.email) {
+                 profileData = {
+                    fullName: parsedProfile.fullName || auth.currentUser.displayName || 'User',
+                    profileImage: parsedProfile.profileImage || auth.currentUser.photoURL || null,
+                    isVerified: parsedProfile.isVerified || false,
+                 };
+            } else {
+                // TODO: Implement Firestore fetch for other users if needed
+                 console.warn(`Fetching profile for user ${userId} from localStorage failed or didn't match. Using defaults.`);
+                 // Attempt to get display name/photo from auth object if it's the current user
+                 if (auth.currentUser && auth.currentUser.uid === userId) {
+                     profileData.fullName = auth.currentUser.displayName || 'User';
+                     profileData.profileImage = auth.currentUser.photoURL || null;
+                 }
+                  // For now, keep isVerified false for others if not found
+            }
+        } catch (e) {
+            console.error("Failed to parse user profile for info", e);
+             if (auth.currentUser && auth.currentUser.uid === userId) {
+                 profileData.fullName = auth.currentUser.displayName || 'User';
+                 profileData.profileImage = auth.currentUser.photoURL || null;
+             }
+        }
+    } else if (auth.currentUser && auth.currentUser.uid === userId) {
+         // Fallback to auth object if no localStorage profile
+         profileData.fullName = auth.currentUser.displayName || 'User';
+         profileData.profileImage = auth.currentUser.photoURL || null;
+    }
+
+    // --- TEMPORARY FOR TESTING BLUE TICK ---
+    if (auth.currentUser && auth.currentUser.uid === userId) {
+         profileData.isVerified = true; // Force verified for current user for testing
+    }
+    // --- END TEMPORARY ---
+
+    return profileData;
+}
+
 
 const ChatPage = () => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
-    const [user] = useAuthState(auth);
+    const [user, authLoading] = useAuthState(auth);
     const [uploading, setUploading] = useState(false);
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
-    const [userIsVerified, setUserIsVerified] = useState<boolean>(false); // State for current user's verification
-    const [adminDetails, setAdminDetails] = useState<{ photoURL: string; displayName: string; isVerified: boolean } | null>(null);
-
-
-    // Fetch current user's verification status from localStorage
-     useEffect(() => {
-        let isVerified = false;
-        if (user) {
-            const profile = localStorage.getItem('userProfile');
-            if (profile) {
-                try {
-                    const parsedProfile = JSON.parse(profile);
-                    // Simple check using email (or UID if profile stores it)
-                    // Ensure parsedProfile.email and user.email are not null/undefined
-                    if(parsedProfile.email && user.email && parsedProfile.email === user.email) {
-                         isVerified = parsedProfile.isVerified || false;
-                    }
-                } catch (e) {
-                    console.error("Failed to parse user profile for verification status", e);
-                }
-            }
-        }
-
-        // --- TEMPORARY FOR TESTING BLUE TICK ---
-        isVerified = true; // Force verified for testing
-        // --- REMOVE THIS LINE AFTER TESTING ---
-
-        setUserIsVerified(isVerified);
-     }, [user]);
-
-    // Fetch admin's details (including verification status)
-    useEffect(() => {
-        const fetchAdminDetails = async () => {
-            // Simulating fetching admin data from localStorage
-            // Replace with actual Firestore fetch if admin data is stored there
-             const adminProfileRaw = localStorage.getItem('adminUserProfile'); // Assuming a separate key for admin
-             let adminPhoto = `https://picsum.photos/seed/${ADMIN_ID}/32/32`;
-             let adminName = "Admin";
-             let adminVerified = true; // Assume admin is verified
-
-             if (adminProfileRaw) {
-                 try {
-                     const adminProfile = JSON.parse(adminProfileRaw);
-                     adminPhoto = adminProfile.profileImage || adminPhoto;
-                     adminName = adminProfile.fullName || adminName;
-                     // Admin verification status might also come from profile or be hardcoded
-                     adminVerified = adminProfile.isVerified !== undefined ? adminProfile.isVerified : true;
-                 } catch (e) {
-                      console.error("Failed to parse admin profile", e);
-                 }
-             }
-
-             setAdminDetails({
-                 photoURL: adminPhoto,
-                 displayName: adminName,
-                 isVerified: adminVerified
-             });
-        };
-        fetchAdminDetails();
-    }, []);
-
-
-    const getChatId = useCallback((userId: string | undefined) => {
-        if (!userId) return null; // Return null if userId is undefined
-        // Ensure consistent chat ID ordering
-        return userId < ADMIN_ID ? `${userId}_${ADMIN_ID}` : `${ADMIN_ID}_${userId}`;
-    }, []);
+    // No need for adminDetails or specific user verification state here,
+    // verification status is per-message sender
 
     const scrollToBottom = useCallback(() => {
         const scrollViewport = scrollAreaRef.current?.querySelector<HTMLDivElement>('[data-radix-scroll-area-viewport]');
@@ -121,73 +114,57 @@ const ChatPage = () => {
     }, []);
 
 
+    // Fetch messages from the global group chat
     useEffect(() => {
-        if (user && adminDetails) { // Ensure admin details are loaded
-            const chatId = getChatId(user.uid);
-            if (!chatId) return; // Don't proceed if chatId is null
+        // No need to check for user here initially, anyone can view (if permissions allow)
+        // Auth check happens before sending messages.
+        const messagesRef = collection(db, 'chats', GROUP_CHAT_ID, 'messages');
+        const q = query(messagesRef, orderBy('timestamp', 'asc'));
 
-            const messagesRef = collection(db, 'chats', chatId, 'messages');
-            const q = query(messagesRef, orderBy('timestamp', 'asc'));
-
-            const unsubscribe = onSnapshot(q, (querySnapshot) => {
-                const msgs = querySnapshot.docs.map(doc => {
-                     const data = doc.data();
-                     // Determine sender's verification status based on senderId
-                     let senderIsVerified = false;
-                     if (data.senderId === ADMIN_ID) {
-                         senderIsVerified = adminDetails.isVerified;
-                     } else if (data.senderId === user.uid) {
-                         // --- TEMPORARY FOR TESTING BLUE TICK ---
-                         senderIsVerified = true; // Force true for testing
-                         // senderIsVerified = userIsVerified; // Original logic
-                         // --- END TEMPORARY ---
-                     }
-                     // If senderId is neither admin nor current user, verification is false (or fetch if needed)
-
-                    return {
-                        id: doc.id,
-                        ...data,
-                        senderIsVerified // Add the verification status
-                    } as Message;
-                });
-                setMessages(msgs);
-                 setTimeout(scrollToBottom, 100); // Scroll after messages update
-            }, (error) => {
-                console.error("Error fetching messages: ", error);
-                toast({
-                    variant: "destructive",
-                    title: "Error",
-                    description: "Could not load chat messages.",
-                });
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const msgs = querySnapshot.docs.map(doc => {
+                 const data = doc.data();
+                // Message data should already contain sender info (name, photo, verified status)
+                // If not, you'd fetch it here based on data.senderId, but storing it is more efficient.
+                return {
+                    id: doc.id,
+                    ...data,
+                } as Message;
             });
+            setMessages(msgs);
+             setTimeout(scrollToBottom, 100); // Scroll after messages update
+        }, (error) => {
+            console.error("Error fetching messages: ", error);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Could not load chat messages.",
+            });
+        });
 
-            return () => unsubscribe();
-        }
-    }, [user, adminDetails, getChatId, scrollToBottom, toast, userIsVerified]); // Add adminDetails and userIsVerified to dependencies
+        return () => unsubscribe();
+    }, [scrollToBottom, toast]); // Removed dependencies on user, adminDetails, etc.
 
 
     const sendMessage = async () => {
-        if (!newMessage.trim() || !user) return;
+        if (!newMessage.trim() || !user || authLoading) {
+             if (!user && !authLoading) toast({ variant: "destructive", title: "Error", description: "Please log in to send messages." });
+             return;
+        }
 
-        const chatId = getChatId(user.uid);
-         if (!chatId) {
-            toast({ variant: "destructive", title: "Error", description: "Cannot determine chat ID." });
-            return;
-         }
-        const messagesRef = collection(db, 'chats', chatId, 'messages');
+        // Fetch sender's current profile info to store with the message
+        const senderInfo = await getUserProfileInfo(user.uid);
+
+        const messagesRef = collection(db, 'chats', GROUP_CHAT_ID, 'messages');
 
         try {
             await addDoc(messagesRef, {
                 text: newMessage,
                 senderId: user.uid,
-                receiverId: ADMIN_ID,
                 timestamp: serverTimestamp(),
-                senderPhotoURL: user.photoURL,
-                senderDisplayName: user.displayName,
-                // --- TEMPORARY FOR TESTING BLUE TICK ---
-                senderIsVerified: true // Force true for testing
-                // senderIsVerified: userIsVerified // Include verification status when sending
-                // --- END TEMPORARY ---
+                senderPhotoURL: senderInfo.profileImage,
+                senderDisplayName: senderInfo.fullName,
+                senderIsVerified: senderInfo.isVerified // Include current verification status
             });
             setNewMessage('');
             // scrollToBottom(); // Let useEffect handle scrolling on message update
@@ -203,36 +180,34 @@ const ChatPage = () => {
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (!file || !user) return;
-
-        setUploading(true);
-        const chatId = getChatId(user.uid);
-        if (!chatId) {
-            toast({ variant: "destructive", title: "Error", description: "Cannot determine chat ID." });
-            setUploading(false);
+         if (!file || !user || authLoading) {
+             if (!user && !authLoading) toast({ variant: "destructive", title: "Error", description: "Please log in to upload files." });
+             setUploading(false); // Ensure uploading is reset
             return;
         }
-        const filePath = `chats/${chatId}/${user.uid}/${Date.now()}_${file.name}`;
+
+        setUploading(true);
+
+         // Fetch sender's current profile info to store with the message
+        const senderInfo = await getUserProfileInfo(user.uid);
+
+        const filePath = `chats/${GROUP_CHAT_ID}/${user.uid}/${Date.now()}_${file.name}`;
         const storageRef = ref(storage, filePath);
 
         try {
             const snapshot = await uploadBytes(storageRef, file);
             const downloadURL = await getDownloadURL(snapshot.ref);
 
-            const messagesRef = collection(db, 'chats', chatId, 'messages');
+            const messagesRef = collection(db, 'chats', GROUP_CHAT_ID, 'messages');
              await addDoc(messagesRef, {
                 senderId: user.uid,
-                receiverId: ADMIN_ID,
                 timestamp: serverTimestamp(),
                 fileUrl: downloadURL,
                 fileName: file.name,
                 fileType: file.type,
-                senderPhotoURL: user.photoURL,
-                senderDisplayName: user.displayName,
-                // --- TEMPORARY FOR TESTING BLUE TICK ---
-                senderIsVerified: true // Force true for testing
-                // senderIsVerified: userIsVerified // Include verification status when sending file
-                // --- END TEMPORARY ---
+                senderPhotoURL: senderInfo.profileImage,
+                senderDisplayName: senderInfo.fullName,
+                senderIsVerified: senderInfo.isVerified // Include verification status when sending file
             });
             // scrollToBottom(); // Let useEffect handle scrolling
         } catch (error) {
@@ -251,18 +226,23 @@ const ChatPage = () => {
     };
 
     const handleUploadClick = () => {
+         if (!user && !authLoading) {
+             toast({ variant: "destructive", title: "Error", description: "Please log in to upload files." });
+             return;
+         }
         fileInputRef.current?.click();
     };
 
-     if (!user) {
+     // Show login prompt if not logged in
+     if (!user && !authLoading) {
         return (
             <div className="container mx-auto p-6 flex justify-center items-center h-[calc(100vh-10rem)]">
                  <Card className="w-full max-w-md neumorphic">
                     <CardHeader>
-                        <CardTitle>Chat</CardTitle>
+                        <CardTitle className="flex items-center"><Users className="mr-2 h-5 w-5"/> Group Chat</CardTitle>
                     </CardHeader>
                      <CardContent>
-                        <p>Please log in to view the chat.</p>
+                        <p>Please log in to participate in the group chat.</p>
                         <Link href="/profile">
                             <Button className="mt-4">Go to Profile/Login</Button>
                         </Link>
@@ -271,24 +251,19 @@ const ChatPage = () => {
             </div>
         );
     }
-
-     if (!adminDetails) {
-          return <div className="container mx-auto p-6 text-center">Loading chat...</div>; // Loading state for admin details
-     }
+    // Optional: Add loading indicator while auth is checking
+     if (authLoading) {
+        return <div className="container mx-auto p-6 text-center">Loading chat...</div>;
+    }
 
 
     return (
         <div className="container mx-auto p-4 flex flex-col h-[calc(100vh-8rem)] bg-secondary/30 rounded-lg shadow-md neumorphic">
-            {/* Chat Header */}
+            {/* Chat Header - Changed to static Group Chat */}
              <div className="border-b p-4 bg-secondary rounded-t-lg flex items-center">
-                <Avatar className="h-8 w-8 mr-3 flex-shrink-0">
-                   <AvatarImage src={adminDetails.photoURL} data-ai-hint="admin avatar chat"/>
-                   <AvatarFallback>{adminDetails.displayName.substring(0,1)}</AvatarFallback>
-                </Avatar>
-                <h1 className="text-xl font-semibold text-secondary-foreground flex items-center flex-shrink min-w-0"> {/* Allow shrinking */}
-                    <span className="truncate">{adminDetails.displayName}</span> {/* Truncate long names */}
-                    {/* Adjusted badge size and margin - Use h-4 w-4 */}
-                    {adminDetails.isVerified && <VerifiedBadge className="ml-1.5 h-4 w-4 flex-shrink-0" />}
+                <Users className="h-6 w-6 mr-3 text-secondary-foreground flex-shrink-0"/>
+                <h1 className="text-xl font-semibold text-secondary-foreground flex items-center flex-shrink min-w-0">
+                    <span className="truncate">Group Chat</span>
                 </h1>
             </div>
 
@@ -297,25 +272,31 @@ const ChatPage = () => {
                  {messages.map((msg) => (
                     <div
                         key={msg.id}
-                        className={`flex ${msg.senderId === user.uid ? 'justify-end' : 'justify-start'}`}
+                        className={`flex ${msg.senderId === user?.uid ? 'justify-end' : 'justify-start'}`} // Check against optional user.uid
                     >
                         <div
-                            className={`flex items-start max-w-xs md:max-w-md lg:max-w-lg ${msg.senderId === user.uid ? 'flex-row-reverse' : ''}`}
+                            className={`flex items-start max-w-xs md:max-w-md lg:max-w-lg ${msg.senderId === user?.uid ? 'flex-row-reverse' : ''}`}
                         >
-                             <Avatar className={`h-6 w-6 ${msg.senderId === user.uid ? 'ml-2' : 'mr-2'} self-end flex-shrink-0`}>
-                                <AvatarImage src={msg.senderPhotoURL || undefined} data-ai-hint="chat user avatar small" />
-                                <AvatarFallback>{msg.senderDisplayName ? msg.senderDisplayName.substring(0, 1).toUpperCase() : '?'}</AvatarFallback>
-                            </Avatar>
+                             {/* Link Avatar to sender's profile */}
+                             <Link href={`/profile/${msg.senderId}`} passHref>
+                                 <Avatar className={`h-6 w-6 ${msg.senderId === user?.uid ? 'ml-2' : 'mr-2'} self-end flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity`}>
+                                    <AvatarImage src={msg.senderPhotoURL || undefined} data-ai-hint="chat user avatar small" />
+                                    <AvatarFallback>{msg.senderDisplayName ? msg.senderDisplayName.substring(0, 1).toUpperCase() : '?'}</AvatarFallback>
+                                </Avatar>
+                             </Link>
                             <div
                                 className={`rounded-lg p-3 shadow ${
-                                    msg.senderId === user.uid
+                                    msg.senderId === user?.uid // Check against optional user.uid
                                         ? 'bg-primary text-primary-foreground'
                                         : 'bg-muted text-foreground'
                                 }`}
                              >
                                 {/* Sender Name and Verification */}
-                                <p className={`text-xs font-semibold mb-1 flex items-center ${msg.senderId === user.uid ? 'justify-end' : 'justify-start'}`}>
-                                    <span>{msg.senderDisplayName || 'User'}</span>
+                                <p className={`text-xs font-semibold mb-1 flex items-center ${msg.senderId === user?.uid ? 'justify-end' : 'justify-start'}`}>
+                                    {/* Link name to sender's profile */}
+                                     <Link href={`/profile/${msg.senderId}`} className="hover:underline">
+                                        <span>{msg.senderDisplayName || 'User'}</span>
+                                     </Link>
                                      {/* Adjusted badge size and margin - Use h-3.5 w-3.5 */}
                                      {msg.senderIsVerified && <VerifiedBadge className="ml-1 h-3.5 w-3.5 flex-shrink-0" />}
                                 </p>
@@ -362,8 +343,9 @@ const ChatPage = () => {
                     onChange={handleFileChange}
                     className="hidden"
                     accept="image/*,application/pdf,.doc,.docx,.ppt,.pptx"
+                    disabled={uploading || !user} // Disable if not logged in
                 />
-                 <Button variant="ghost" size="icon" onClick={handleUploadClick} disabled={uploading} title="Attach file">
+                 <Button variant="ghost" size="icon" onClick={handleUploadClick} disabled={uploading || !user} title="Attach file">
                     <Paperclip className="h-5 w-5"/>
                 </Button>
                 <Input
@@ -373,9 +355,9 @@ const ChatPage = () => {
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
                     className="flex-grow"
-                    disabled={uploading}
+                    disabled={uploading || !user} // Disable if not logged in
                 />
-                <Button onClick={sendMessage} disabled={!newMessage.trim() || uploading} title="Send message">
+                <Button onClick={sendMessage} disabled={!newMessage.trim() || uploading || !user} title="Send message">
                     <Send className="h-5 w-5"/>
                 </Button>
             </div>
@@ -384,3 +366,5 @@ const ChatPage = () => {
 };
 
 export default ChatPage;
+
+    
