@@ -32,10 +32,12 @@ function CategoryDetailContent() {
 
   // Use React.use to unwrap the promise/value from params
   // This requires the component or its parent to be wrapped in <Suspense>
-   const categoryParam = params ? React.use(Promise.resolve(params.category)) : null;
+  // Directly access params.category, no need for Promise.resolve + React.use here
+  const categoryParam = params?.category;
 
 
    const category = useMemo(() => {
+     // Ensure categoryParam is correctly derived and is a string
      if (!categoryParam || typeof categoryParam !== 'string') {
        return '';
      }
