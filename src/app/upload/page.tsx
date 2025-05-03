@@ -16,16 +16,20 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/c
 import { File } from "lucide-react";
 
 const formSchema = z.object({
-  category: z.string().min(2, {
-    message: "Category must be at least 2 characters.",
+  category: z.string().min(1, {
+    message: "Category must be selected.", // Changed validation message
   }),
-  title: z.string().min(2, {
-    message: "Title must be at least 2 characters.",
-  }).max(200, {message: "Title must be at most 40 words."}),
+  title: z.string()
+    .min(2, {
+      message: "Title must be at least 2 characters.",
+    })
+    .max(200, { // Max characters, approximately 40 words
+      message: "Title must be at most 200 characters (approx. 40 words).",
+    }),
   description: z.string().min(10, {
     message: "Description must be at least 10 characters.",
   }),
-  files: z.array(z.any()).min(1, {message: "Please upload at least one file."})
+  files: z.array(z.instanceof(File)).min(1, {message: "Please upload at least one file."}) // Use z.instanceof(File)
 })
 
 type FormValues = z.infer<typeof formSchema>;
@@ -40,11 +44,35 @@ const UploadPage = () => {
     // Load categories from local storage on component mount
     const storedCategories = localStorage.getItem('categories');
     if (storedCategories) {
-      setCategories(JSON.parse(storedCategories));
+      try {
+        const parsedCategories = JSON.parse(storedCategories);
+        if (Array.isArray(parsedCategories)) {
+            setCategories(parsedCategories);
+        } else {
+            console.error("Stored categories is not an array:", parsedCategories);
+            // Optionally set default categories if parsing fails or format is incorrect
+            // setCategories(['Default Category']);
+        }
+      } catch (error) {
+        console.error("Failed to parse categories from localStorage:", error);
+         // Optionally set default categories on error
+         // setCategories(['Default Category']);
+      }
+    } else {
+       // Optionally set default categories if none are stored
+       // setCategories(['Default Category']);
     }
   }, []);
 
   const form = useForm<FormValues>({
+    resolver: async (data, context, options) => {
+      // Use Zod resolver
+      const result = formSchema.safeParse(data);
+      if (!result.success) {
+        return { values: {}, errors: result.error.flatten().fieldErrors };
+      }
+      return { values: result.data, errors: {} };
+    },
     defaultValues: {
       category: "",
       title: "",
@@ -56,55 +84,124 @@ const UploadPage = () => {
   async function onSubmit(values: FormValues) {
     setIsLoading(true);
 
-    const fileDataUrls = [];
-    for (const file of values.files) {
-      const fileDataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      fileDataUrls.push({ url: fileDataUrl, type: file.type });
+    // Get user profile from localStorage
+    let uploaderName = 'Anonymous'; // Default name
+    let uploaderProfileImage: string | null = null; // Default image
+    let uploaderIsVerified = false; // Default verification status
+    const userProfileRaw = localStorage.getItem('userProfile');
+    if (userProfileRaw) {
+      try {
+        const userProfile = JSON.parse(userProfileRaw);
+        uploaderName = userProfile.fullName || 'Anonymous';
+        uploaderProfileImage = userProfile.profileImage || null;
+        uploaderIsVerified = userProfile.isVerified || false;
+      } catch (error) {
+        console.error("Failed to parse user profile from localStorage for uploader info", error);
+      }
     }
 
+    const fileData = [];
+    for (const file of values.files) {
+      try {
+          const fileDataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          fileData.push({ url: fileDataUrl, type: file.type, name: file.name }); // Include file name
+      } catch (error) {
+          console.error("Error reading file:", file.name, error);
+          toast({
+            variant: "destructive",
+            title: "File Read Error",
+            description: `Could not process file: ${file.name}`,
+          });
+          setIsLoading(false);
+          return; // Stop submission if a file fails
+      }
+    }
+
+
     const newNote = {
-      id: Date.now(),
+      id: Date.now().toString(), // Use string ID
       title: values.title,
       description: values.description,
-      uploader: 'CurrentUser', // Replace with actual user info
+      uploader: uploaderName, // Use actual uploader name
+      uploaderProfileImage: uploaderProfileImage, // Include profile image URL
+      uploaderIsVerified: uploaderIsVerified, // Include verification status
       timestamp: new Date().toISOString(),
-      files: fileDataUrls,
+      files: fileData,
+      category: values.category, // Include category in the note itself
     };
 
     // Load existing notes for the category or initialize an empty array
+    let existingNotes = [];
     const storedNotes = localStorage.getItem(values.category);
-    const existingNotes = storedNotes ? JSON.parse(storedNotes) : [];
+    if (storedNotes) {
+        try {
+            existingNotes = JSON.parse(storedNotes);
+            if (!Array.isArray(existingNotes)) {
+                console.warn(`Stored data for category ${values.category} is not an array. Resetting.`);
+                existingNotes = [];
+            }
+        } catch (error) {
+            console.error(`Failed to parse notes for category ${values.category}. Resetting.`, error);
+            existingNotes = [];
+        }
+    }
+
 
     // Add the new note to the existing notes
     const updatedNotes = [...existingNotes, newNote];
 
     // Store the updated notes back in local storage
-    localStorage.setItem(values.category, JSON.stringify(updatedNotes));
+    try {
+        localStorage.setItem(values.category, JSON.stringify(updatedNotes));
+    } catch (error) {
+        console.error(`Failed to save notes for category ${values.category} to localStorage.`, error);
+        toast({
+          variant: "destructive",
+          title: "Save Error",
+          description: "Could not save the note locally.",
+        });
+        setIsLoading(false);
+        return; // Stop if saving fails
+    }
+
 
     // Simulate a delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 500)); // Reduced delay
     setIsLoading(false);
     toast({
       title: "Success!",
       description: "Study material uploaded successfully.",
     })
-    router.push('/');
+    form.reset(); // Reset form fields
+    setUploadedFiles([]); // Clear uploaded files state
+    router.push(`/category/${encodeURIComponent(values.category)}`); // Redirect to the category page
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setUploadedFiles((prevFiles) => [...prevFiles, ...files]); // Append new files to the existing state
-    form.setValue("files", [...uploadedFiles, ...files]); // Update form's files array
+    const currentFiles = form.getValues("files") || [];
+    const newFiles = [...currentFiles, ...files];
+    setUploadedFiles(newFiles); // Update state with the combined list
+    form.setValue("files", newFiles, { shouldValidate: true }); // Update form's files array and trigger validation
   };
 
+  // Function to remove a file
+  const removeFile = (indexToRemove: number) => {
+    const currentFiles = form.getValues("files") || [];
+    const updatedFiles = currentFiles.filter((_, index) => index !== indexToRemove);
+    setUploadedFiles(updatedFiles); // Update state
+    form.setValue("files", updatedFiles, { shouldValidate: true }); // Update form and trigger validation
+  };
+
+
   return (
-    <div className="flex justify-center items-center min-h-screen bg-background">
-      <Card className="w-[500px] bg-card text-card-foreground shadow-lg">
+    <div className="flex justify-center items-center min-h-screen bg-background p-4"> {/* Added padding */}
+      <Card className="w-full max-w-lg bg-card text-card-foreground shadow-lg neumorphic"> {/* Adjusted max-width */}
         <CardHeader>
           <CardTitle className="text-2xl font-semibold">Upload Study Material</CardTitle>
           <CardDescription>Share your notes and help others learn.</CardDescription>
@@ -125,9 +222,13 @@ const UploadPage = () => {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category}>{category}</SelectItem>
-                        ))}
+                        {categories.length > 0 ? (
+                            categories.map((category) => (
+                              <SelectItem key={category} value={category}>{category}</SelectItem>
+                            ))
+                         ) : (
+                             <SelectItem value="disabled" disabled>No categories available</SelectItem>
+                         )}
                       </SelectContent>
                     </Select>
                     <FormDescription>
@@ -144,10 +245,10 @@ const UploadPage = () => {
                   <FormItem>
                     <FormLabel>Title</FormLabel>
                     <FormControl>
-                      <Input placeholder="Give your notes a descriptive title." {...field} maxLength={200} />
+                      <Input placeholder="Give your notes a descriptive title." {...field} />
                     </FormControl>
                     <FormDescription>
-                      Give your notes a descriptive title.
+                       Max 200 characters (approx. 40 words).
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -163,6 +264,7 @@ const UploadPage = () => {
                       <Textarea
                         placeholder="e.g., Detailed notes on Microeconomics concepts."
                         className="resize-none"
+                        rows={4} // Slightly larger textarea
                         {...field}
                       />
                     </FormControl>
@@ -176,28 +278,49 @@ const UploadPage = () => {
              <FormField
                 control={form.control}
                 name="files"
-                render={({ field }) => (
+                render={({ fieldState }) => ( // Use fieldState to check for errors
                   <FormItem>
                     <FormLabel>Upload Files</FormLabel>
                     <FormControl>
-                      <Input
-                        type="file"
-                        multiple
-                        onChange={handleFileChange} // Use the custom handler
-                      />
+                      {/* Hidden input triggered by a button */}
+                       <Input
+                          id="file-upload-input"
+                          type="file"
+                          multiple
+                          onChange={handleFileChange}
+                          className="hidden" // Keep input hidden
+                          accept=".pdf,.doc,.docx,.ppt,.pptx,image/*" // Specify accepted types
+                       />
                     </FormControl>
+                     {/* Custom Button to trigger file input */}
+                     <Button type="button" variant="outline" onClick={() => document.getElementById('file-upload-input')?.click()}>
+                       <File className="mr-2 h-4 w-4" /> Add Files
+                     </Button>
                     <FormDescription>
-                      Supported files: PDF, Word, PPT, Images
+                      Supported files: PDF, Word, PPT, Images. You can add multiple files.
                     </FormDescription>
-                    <FormMessage />
+                    {/* Display error message if validation fails */}
+                    {fieldState.error && <FormMessage>{fieldState.error.message}</FormMessage>}
+                    {/* Display list of uploaded files with remove button */}
                      {uploadedFiles.length > 0 && (
-                      <div className="mt-2">
-                        Uploaded Files:
-                        <ul>
+                      <div className="mt-4 space-y-2">
+                        <h4 className="text-sm font-medium">Selected Files:</h4>
+                        <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
                           {uploadedFiles.map((file, index) => (
-                            <li key={index} className="flex items-center space-x-2">
-                              <File className="h-4 w-4" />
-                              <span>{file.name}</span>
+                            <li key={index} className="flex items-center justify-between">
+                              <span className="truncate mr-2">
+                                <File className="h-4 w-4 inline mr-1" />
+                                {file.name} ({ (file.size / 1024).toFixed(1) } KB)
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeFile(index)}
+                                className="text-destructive hover:text-destructive/80 h-auto p-1"
+                              >
+                                Remove
+                              </Button>
                             </li>
                           ))}
                         </ul>
@@ -206,8 +329,9 @@ const UploadPage = () => {
                   </FormItem>
                 )}
               />
-              <CardFooter>
-                <Button type="submit" className={cn("ml-auto bg-accent text-accent-foreground", isLoading && "cursor-not-allowed opacity-50")} disabled={isLoading}>
+              {/* Moved Button outside the last FormField */}
+              <CardFooter className="pt-4"> {/* Add padding top */}
+                <Button type="submit" className={cn("ml-auto bg-accent text-accent-foreground", isLoading && "cursor-not-allowed opacity-50")} disabled={isLoading || uploadedFiles.length === 0}>
                   {isLoading ? "Uploading..." : "Upload"}
                 </Button>
               </CardFooter>

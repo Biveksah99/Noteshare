@@ -1,154 +1,167 @@
 
 "use client";
 
-import React, { useEffect, useState, useMemo } from 'react';
-import { useRouter, useParams } from 'next/navigation'; // Correct import
+import React, { useEffect, useState, useMemo, Suspense } from 'react'; // Added Suspense
+import { useRouter, useParams, useSearchParams } from 'next/navigation'; // Correct import
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from 'date-fns';
 import Link from "next/link";
-import { File, Image as ImageIcon } from "lucide-react";
+import { File, Image as ImageIcon, Loader2 } from "lucide-react"; // Added Loader2
 import { VerifiedBadge } from '@/components/ui/verified-badge'; // Import the new badge
 
-// Interface for Note structure including uploader verification
+// Interface for Note structure including uploader verification and profile image
 interface Note {
-  id: number | string;
+  id: string; // Ensure ID is string
   title: string;
   description: string;
   uploader: string;
+  uploaderProfileImage?: string | null; // Added for profile image URL
   timestamp: string; // ISO string date
-  files: Array<{ url: string; type: string }>;
-  category?: string; // Keep category if needed elsewhere
+  files: Array<{ url: string; type: string; name?: string }>; // Added optional name
+  category: string; // Category is essential here
   uploaderIsVerified?: boolean; // Added for verification status
 }
 
 const DESCRIPTION_PREVIEW_LIMIT = 100; // Limit for description preview
 
-// Changed component signature to accept params prop
-const CategoryDetailPage = () => {
+// Separate component to handle Suspense logic if needed, or keep within main component
+function CategoryDetailContent() {
+  const params = useParams();
   const router = useRouter();
-  const params = useParams(); // Use useParams hook
 
-  // Decode the category from params using useMemo
+  // Use React.use to unwrap the promise/value from params
+  // This requires the component or its parent to be wrapped in <Suspense>
+   const categoryParam = params ? React.use(Promise.resolve(params.category)) : null;
+
+
    const category = useMemo(() => {
-     // Check if params exists and category property is a string
-     if (!params || typeof params.category !== 'string') {
-       return ''; // Return empty string if params or category is invalid
+     if (!categoryParam || typeof categoryParam !== 'string') {
+       return '';
      }
      try {
-       // Decode the category parameter directly from params
-       return decodeURIComponent(params.category);
+       return decodeURIComponent(categoryParam);
      } catch (e) {
        console.error("Failed to decode category param:", e);
-       return params.category; // Fallback to original if decoding fails
+       return categoryParam; // Fallback
      }
-   }, [params?.category]); // Dependency is the raw category string
+   }, [categoryParam]);
 
 
   const [notes, setNotes] = useState<Note[]>([]); // Use Note interface
+  const [isLoading, setIsLoading] = useState(true); // Loading state
 
   useEffect(() => {
+    setIsLoading(true); // Start loading
     if (category) {
-      const storedNotes = localStorage.getItem(category);
-      if (storedNotes) {
+      const storedNotesRaw = localStorage.getItem(category);
+      let foundNotes: Note[] = [];
+      if (storedNotesRaw) {
         try {
-          const parsedNotes: Note[] = JSON.parse(storedNotes);
-          // Fetch verification status for each note's uploader
-          const notesWithVerification = parsedNotes.map(note => {
-            const userProfileRaw = localStorage.getItem('userProfile');
-            let uploaderIsVerified = false;
-            if (userProfileRaw) {
-              try {
-                const userProfile = JSON.parse(userProfileRaw);
-                // Use email or a unique ID if available in the note data
-                // Assuming uploader name matches fullName for now (fragile)
-                // Ideally, notes should store uploader's unique ID (e.g., email or Firebase UID)
-                if (userProfile.fullName === note.uploader) {
-                  uploaderIsVerified = userProfile.isVerified || false;
-                }
-              } catch (profileError) {
-                console.warn("Could not parse user profile for verification status", profileError);
-              }
-            }
-             // --- TEMPORARY FOR TESTING BLUE TICK ---
-             uploaderIsVerified = true; // Force verified for testing
-             // --- REMOVE THIS LINE AFTER TESTING ---
-            return { ...note, uploaderIsVerified };
-          });
-          setNotes(notesWithVerification);
+          const parsedNotes = JSON.parse(storedNotesRaw);
+          if (Array.isArray(parsedNotes)) {
+             // Basic validation for each note
+            foundNotes = parsedNotes.filter(note =>
+                note && typeof note === 'object' && note.id && note.title && note.timestamp && note.files && note.uploader
+            ).map(note => ({ ...note, category: category })) as Note[]; // Ensure category is set
+
+          } else {
+            console.warn(`Stored data for category ${category} is not an array.`);
+          }
         } catch (error) {
           console.error("Error parsing stored notes:", error);
-          setNotes([]);
         }
-      } else {
-        setNotes([]);
       }
+       // Sort notes by timestamp (newest first)
+      foundNotes.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setNotes(foundNotes);
+    } else {
+        setNotes([]); // Clear notes if category is invalid
     }
+    setIsLoading(false); // Finish loading
   }, [category]);
 
-  const renderFilePreview = (files: Array<{ url: string; type: string }>) => {
+  const renderFilePreview = (files: Array<{ url: string; type: string; name?: string }>) => {
     if (!files || files.length === 0) {
-      return <p className="text-sm text-muted-foreground">No preview available.</p>;
+      return <p className="text-sm text-muted-foreground p-4 text-center">No preview available.</p>;
     }
     const firstFile = files[0];
     const fileType = firstFile.type || '';
 
     if (fileType.startsWith('image/')) {
       return (
-        <div className="mt-2 relative aspect-video overflow-hidden rounded-md border">
+        <div className="mt-2 relative aspect-video overflow-hidden rounded-md border bg-muted"> {/* Added bg-muted */}
           <img
             src={firstFile.url}
-            alt="Note preview"
-            className="w-full h-full object-cover"
+            alt={firstFile.name || "Note preview"} // Use file name if available
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" // Added hover effect
             loading="lazy"
             data-ai-hint="note preview image"
           />
           {files.length > 1 && (
-            <span className="absolute bottom-1 right-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+            <span className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded-md backdrop-blur-sm">
               +{files.length - 1} more
             </span>
           )}
         </div>
       );
     } else if (fileType === 'application/pdf') {
-      return <div className="mt-2 flex items-center text-sm text-muted-foreground"><File className="h-4 w-4 mr-1"/> PDF Document {files.length > 1 ? `(+${files.length - 1})` : ''}</div>;
+      return <div className="mt-2 flex items-center text-sm text-muted-foreground p-4"><File className="h-4 w-4 mr-1.5 flex-shrink-0"/> PDF Document {files.length > 1 ? `(+${files.length - 1})` : ''}</div>;
     } else {
-      return <div className="mt-2 flex items-center text-sm text-muted-foreground"><File className="h-4 w-4 mr-1"/> File {files.length > 1 ? `(+${files.length - 1})` : ''}</div>;
+      // Generic file icon and name
+       const fileName = firstFile.name || `File ${files.length > 1 ? `(+${files.length - 1})` : ''}`;
+      return <div className="mt-2 flex items-center text-sm text-muted-foreground p-4 truncate"><File className="h-4 w-4 mr-1.5 flex-shrink-0"/> {fileName}</div>;
     }
   };
 
+   if (isLoading) {
+      return (
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="ml-2">Loading notes...</span>
+        </div>
+      );
+   }
 
   return (
-    <div className="container mx-auto p-6">
+    <>
       <h1 className="text-3xl font-semibold mb-6 text-center capitalize">{category} Notes</h1>
       {notes.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {notes.map((note) => (
+            // Link wrapping the card, includes category and note ID
             <Link key={note.id} href={`/view-note?id=${note.id}&category=${encodeURIComponent(category)}`} className="block group">
-              <Card className="h-full neumorphic bg-card shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col overflow-hidden">
+              <Card className="h-full neumorphic bg-card shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col overflow-hidden rounded-lg">
                 {/* File Preview Area */}
                 {renderFilePreview(note.files)}
 
                 {/* Content Area */}
                 <CardHeader className="p-4 flex-shrink-0">
                   <CardTitle className="text-lg mb-1 line-clamp-2">{note.title}</CardTitle>
-                  <CardDescription className="text-xs flex items-center flex-wrap"> {/* Allow wrapping */}
+                  <CardDescription className="text-xs flex items-center flex-wrap mt-1"> {/* Allow wrapping */}
                     <Avatar className="h-5 w-5 mr-1.5 flex-shrink-0">
-                      <AvatarImage src={`https://picsum.photos/seed/${note.uploader}/20/20`} alt={note.uploader} data-ai-hint="user avatar tiny"/>
-                      <AvatarFallback className="text-xs">{note.uploader.substring(0, 1)}</AvatarFallback>
+                       {/* Use uploaderProfileImage if available, fallback to picsum */}
+                       <AvatarImage
+                         src={note.uploaderProfileImage || `https://picsum.photos/seed/${note.uploader}/20/20`}
+                         alt={note.uploader}
+                         data-ai-hint="user avatar tiny"
+                       />
+                      <AvatarFallback className="text-xs">{note.uploader ? note.uploader.substring(0, 1).toUpperCase() : '?'}</AvatarFallback>
                     </Avatar>
                     <span className="font-medium mr-0.5">{note.uploader}</span> {/* Add small margin */}
-                    {/* Adjusted badge size and margin - Use h-3.5 w-3.5 */}
+                    {/* Adjusted badge size and margin */}
                     {note.uploaderIsVerified && <VerifiedBadge className="h-3.5 w-3.5 ml-0.5 flex-shrink-0" />}
                     <span className="mx-1">·</span>
-                    {format(new Date(note.timestamp), 'MMM d, yyyy')}
+                    <span title={new Date(note.timestamp).toLocaleString()}> {/* Add title for exact time */}
+                        {format(new Date(note.timestamp), 'MMM d, yyyy')}
+                    </span>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-4 pt-0 flex-grow">
                   <CardDescription className="text-sm line-clamp-3">
-                    {note.description.length > DESCRIPTION_PREVIEW_LIMIT
+                    {note.description && note.description.length > DESCRIPTION_PREVIEW_LIMIT
                       ? `${note.description.substring(0, DESCRIPTION_PREVIEW_LIMIT)}...`
-                      : note.description
+                      : note.description || 'No description provided.' // Handle empty description
                     }
                   </CardDescription>
                 </CardContent>
@@ -157,10 +170,28 @@ const CategoryDetailPage = () => {
           ))}
         </div>
       ) : (
-        <p className="text-center text-muted-foreground mt-10">No notes found in this category yet.</p>
+        <p className="text-center text-muted-foreground mt-10">No notes found in the "{category}" category yet. Be the first to upload!</p>
       )}
+    </>
+  );
+}
+
+
+// Main component wrapping the content with Suspense
+const CategoryDetailPage = () => {
+  return (
+    <div className="container mx-auto p-4 md:p-6">
+       <Suspense fallback={
+         <div className="flex justify-center items-center h-64">
+           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+           <span className="ml-2">Loading category...</span>
+         </div>
+       }>
+         <CategoryDetailContent />
+       </Suspense>
     </div>
   );
 };
+
 
 export default CategoryDetailPage;
