@@ -27,18 +27,16 @@ const DESCRIPTION_PREVIEW_LIMIT = 100; // Limit for description preview
 const CategoryDetailPage = ({ params }: { params: { category: string } }) => {
   const router = useRouter();
 
-  // Use useMemo with the params prop
+  // Decode the category from params directly. Handle potential decoding errors.
   const category = useMemo(() => {
-    if (!params || typeof params.category !== 'string') {
-      return '';
-    }
     try {
-      return decodeURIComponent(params.category);
+      return params.category ? decodeURIComponent(params.category) : '';
     } catch (e) {
       console.error("Failed to decode category param:", e);
-      return params.category; // Fallback to original if decoding fails
+      return params.category || ''; // Fallback to original or empty string
     }
-  }, [params]); // Dependency is now the params prop
+  }, [params.category]);
+
 
   const [notes, setNotes] = useState<Note[]>([]); // Use Note interface
 

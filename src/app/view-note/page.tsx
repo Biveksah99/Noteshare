@@ -34,10 +34,10 @@ const ViewNotePage = () => {
   const router = useRouter();
 
   // Extract parameters directly using searchParams.get()
-  // No React.use needed here in client component
   const noteId = searchParams?.get('id');
   const category = searchParams?.get('category');
   const fileIndexParam = searchParams?.get('fileIndex');
+
 
   const [note, setNote] = useState<Note | null>(null); // Use Note interface
   const [currentFileIndex, setCurrentFileIndex] = useState<number>(0);
@@ -143,10 +143,11 @@ const ViewNotePage = () => {
   }
 
   const file = note.files && note.files.length > currentFileIndex ? note.files[currentFileIndex] : null;
-  const baseFileName = note.title ? note.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() : `note_${note.id}`;
-  // Ensure file exists before trying to get extension
-  const fileExtension = file ? getFileExtension(file.type) : 'bin';
+  // Handle cases where file might be null before accessing properties
+  const baseFileName = note.title ? note.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() : `note_${note.id || 'unknown'}`;
+  const fileExtension = file ? getFileExtension(file.type) : 'bin'; // Default extension if file is null
   const fileName = `${baseFileName}_${currentFileIndex + 1}.${fileExtension}`;
+
 
   const description = note.description || 'No description provided.';
   const isLongDescription = description.length > DESCRIPTION_CHAR_LIMIT;
