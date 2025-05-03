@@ -48,6 +48,7 @@ const ChatPage = () => {
 
     // Fetch current user's verification status from localStorage
      useEffect(() => {
+        let isVerified = false;
         if (user) {
             const profile = localStorage.getItem('userProfile');
             if (profile) {
@@ -56,21 +57,19 @@ const ChatPage = () => {
                     // Simple check using email (or UID if profile stores it)
                     // Ensure parsedProfile.email and user.email are not null/undefined
                     if(parsedProfile.email && user.email && parsedProfile.email === user.email) {
-                         setUserIsVerified(parsedProfile.isVerified || false);
-                    } else {
-                        // If email doesn't match or is missing, assume not verified for safety
-                        setUserIsVerified(false);
+                         isVerified = parsedProfile.isVerified || false;
                     }
                 } catch (e) {
                     console.error("Failed to parse user profile for verification status", e);
-                    setUserIsVerified(false); // Default to false on error
                 }
-            } else {
-                 setUserIsVerified(false); // Default to false if no profile
             }
-        } else {
-            setUserIsVerified(false); // Default to false if no user
         }
+
+        // --- TEMPORARY FOR TESTING BLUE TICK ---
+        isVerified = true; // Force verified for testing
+        // --- REMOVE THIS LINE AFTER TESTING ---
+
+        setUserIsVerified(isVerified);
      }, [user]);
 
     // Fetch admin's details (including verification status)
@@ -79,31 +78,27 @@ const ChatPage = () => {
             // Simulating fetching admin data from localStorage
             // Replace with actual Firestore fetch if admin data is stored there
              const adminProfileRaw = localStorage.getItem('adminUserProfile'); // Assuming a separate key for admin
+             let adminPhoto = `https://picsum.photos/seed/${ADMIN_ID}/32/32`;
+             let adminName = "Admin";
+             let adminVerified = true; // Assume admin is verified
+
              if (adminProfileRaw) {
                  try {
                      const adminProfile = JSON.parse(adminProfileRaw);
-                     setAdminDetails({
-                         photoURL: adminProfile.profileImage || `https://picsum.photos/seed/${ADMIN_ID}/32/32`, // Placeholder with seed
-                         displayName: adminProfile.fullName || "Admin", // Placeholder
-                         isVerified: adminProfile.isVerified || true // Assume admin is verified if not specified
-                     });
+                     adminPhoto = adminProfile.profileImage || adminPhoto;
+                     adminName = adminProfile.fullName || adminName;
+                     // Admin verification status might also come from profile or be hardcoded
+                     adminVerified = adminProfile.isVerified !== undefined ? adminProfile.isVerified : true;
                  } catch (e) {
                       console.error("Failed to parse admin profile", e);
-                      // Fallback if parsing fails
-                      setAdminDetails({
-                          photoURL: `https://picsum.photos/seed/${ADMIN_ID}/32/32`,
-                          displayName: "Admin",
-                          isVerified: true
-                      });
                  }
-             } else {
-                 // Fallback if no admin profile in localStorage
-                 setAdminDetails({
-                     photoURL: `https://picsum.photos/seed/${ADMIN_ID}/32/32`,
-                     displayName: "Admin",
-                     isVerified: true
-                 });
              }
+
+             setAdminDetails({
+                 photoURL: adminPhoto,
+                 displayName: adminName,
+                 isVerified: adminVerified
+             });
         };
         fetchAdminDetails();
     }, []);
@@ -141,7 +136,10 @@ const ChatPage = () => {
                      if (data.senderId === ADMIN_ID) {
                          senderIsVerified = adminDetails.isVerified;
                      } else if (data.senderId === user.uid) {
-                         senderIsVerified = userIsVerified;
+                         // --- TEMPORARY FOR TESTING BLUE TICK ---
+                         senderIsVerified = true; // Force true for testing
+                         // senderIsVerified = userIsVerified; // Original logic
+                         // --- END TEMPORARY ---
                      }
                      // If senderId is neither admin nor current user, verification is false (or fetch if needed)
 
@@ -185,7 +183,10 @@ const ChatPage = () => {
                 timestamp: serverTimestamp(),
                 senderPhotoURL: user.photoURL,
                 senderDisplayName: user.displayName,
-                senderIsVerified: userIsVerified // Include verification status when sending
+                // --- TEMPORARY FOR TESTING BLUE TICK ---
+                senderIsVerified: true // Force true for testing
+                // senderIsVerified: userIsVerified // Include verification status when sending
+                // --- END TEMPORARY ---
             });
             setNewMessage('');
             // scrollToBottom(); // Let useEffect handle scrolling on message update
@@ -227,7 +228,10 @@ const ChatPage = () => {
                 fileType: file.type,
                 senderPhotoURL: user.photoURL,
                 senderDisplayName: user.displayName,
-                senderIsVerified: userIsVerified // Include verification status when sending file
+                // --- TEMPORARY FOR TESTING BLUE TICK ---
+                senderIsVerified: true // Force true for testing
+                // senderIsVerified: userIsVerified // Include verification status when sending file
+                // --- END TEMPORARY ---
             });
             // scrollToBottom(); // Let useEffect handle scrolling
         } catch (error) {

@@ -68,6 +68,11 @@ const ViewNotePage = () => {
                  console.warn("Could not parse user profile for verification status", profileError);
                }
              }
+
+             // --- TEMPORARY FOR TESTING BLUE TICK ---
+             uploaderIsVerified = true; // Force verified for testing
+             // --- REMOVE THIS LINE AFTER TESTING ---
+
              setNote({ ...foundNote, uploaderIsVerified }); // Add verification status to note state
 
             const initialFileIndex = fileIndexParam ? parseInt(fileIndexParam, 10) : 0;

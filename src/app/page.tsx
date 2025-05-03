@@ -78,6 +78,10 @@ const Home = () => {
                      }
                    }
 
+                   // --- TEMPORARY FOR TESTING BLUE TICK ---
+                   uploaderIsVerified = true; // Force verified for testing
+                   // --- REMOVE THIS LINE AFTER TESTING ---
+
                    uploads.push({ ...note, category: key, uploaderIsVerified });
                  } else {
                    console.warn(`Skipping invalid note structure in category ${key}:`, note);
@@ -214,3 +218,4 @@ const Home = () => {
 };
 
 export default Home;
+

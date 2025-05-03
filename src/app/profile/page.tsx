@@ -153,18 +153,19 @@ const ProfilePage = () => {
   // Load profile data from localStorage on mount
   useEffect(() => {
     const savedProfile = localStorage.getItem('userProfile');
+    let loadedData = { ...form.formState.defaultValues, isVerified: false }; // Start with defaults
+
     if (savedProfile) {
       try {
         const profileData = JSON.parse(savedProfile);
         // Ensure default values are handled if fields are missing
         const defaults = form.formState.defaultValues;
-        // Explicitly include isVerified from loaded data or default to false
-        const loadedData = {
+        // Merge loaded data with defaults
+        loadedData = {
           ...defaults,
           ...profileData,
-          isVerified: profileData.isVerified || false // Ensure isVerified is loaded correctly
+          isVerified: profileData.isVerified || false // Load actual or default verification
         };
-        form.reset(loadedData); // Update form with saved data, keeping defaults for missing fields
         if (profileData.profileImage) {
             setProfileImage(profileData.profileImage);
         } else {
@@ -175,13 +176,22 @@ const ProfilePage = () => {
         console.error("Failed to parse profile data from localStorage", error);
         // Set default image if loading fails
         setProfileImage("https://picsum.photos/id/237/200/300");
-        form.reset({...form.formState.defaultValues, isVerified: false}); // Reset with default verification status on error
+        // Reset with default verification status on error
+        loadedData.isVerified = false;
       }
     } else {
         // Set default image if no profile exists
         setProfileImage("https://picsum.photos/id/237/200/300");
-        form.reset({...form.formState.defaultValues, isVerified: false}); // Reset with default verification status if no profile
+        // Reset with default verification status if no profile
+        loadedData.isVerified = false;
     }
+
+    // --- TEMPORARY FOR TESTING BLUE TICK ---
+    loadedData.isVerified = true; // Force verified status for testing
+    // --- REMOVE THIS LINE AFTER TESTING ---
+
+    form.reset(loadedData); // Update form with possibly modified data
+
   }, [form]);
 
 
@@ -200,7 +210,10 @@ const ProfilePage = () => {
       const profileToSave = {
          ...values,
          profileImage,
-         isVerified: currentProfile.isVerified || values.isVerified || false // Preserve existing or use form value, default false
+         // --- TEMPORARY FOR TESTING BLUE TICK ---
+         // isVerified: currentProfile.isVerified || values.isVerified || false // Preserve existing or use form value, default false
+         isVerified: true // Keep forced true for testing, revert later
+         // --- END TEMPORARY ---
        };
       localStorage.setItem('userProfile', JSON.stringify(profileToSave));
       console.log("Profile saved to localStorage:", profileToSave);
@@ -277,7 +290,10 @@ const ProfilePage = () => {
         const profileToSave = {
            ...currentValues,
            profileImage: croppedImageUrl,
-           isVerified: currentProfile.isVerified || currentValues.isVerified || false
+           // --- TEMPORARY FOR TESTING BLUE TICK ---
+           // isVerified: currentProfile.isVerified || currentValues.isVerified || false
+           isVerified: true // Keep forced true for testing
+           // --- END TEMPORARY ---
         };
         localStorage.setItem('userProfile', JSON.stringify(profileToSave));
 
@@ -558,3 +574,4 @@ const ProfilePage = () => {
 }
 
 export default ProfilePage
+
