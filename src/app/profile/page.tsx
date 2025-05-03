@@ -331,7 +331,7 @@ const ProfilePage = () => {
        <div className="flex justify-between items-center border-b pb-2 mb-6"> {/* Increased margin-bottom */}
           <h1 className="text-2xl font-semibold flex items-center">
              <span>{currentValues.fullName || "User"}</span>
-             {/* Adjusted badge size and margin - Use h-4 w-4 for slightly smaller badge */}
+             {/* Adjusted badge size and margin - Use h-4 w-4 */}
              {currentValues.isVerified && <VerifiedBadge className="ml-1.5 h-4 w-4 flex-shrink-0" />}
           </h1>
           <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
@@ -578,4 +578,3 @@ const ProfilePage = () => {
 }
 
 export default ProfilePage
-

@@ -101,37 +101,41 @@ body {
 /* Verified Badge Shine Animation */
 @keyframes shine {
   0% {
-    transform: translateX(-100%) rotate(-15deg); /* Start off-screen left, slight rotation */
+    transform: translateX(-150%) translateY(-50%) rotate(-30deg); /* Start further off-screen left */
     opacity: 0;
   }
   50% {
-    transform: translateX(0) rotate(-15deg); /* Move across the badge */
+    transform: translateX(50%) translateY(-50%) rotate(-30deg); /* Move across the badge */
     opacity: 0.4; /* Adjusted peak brightness */
   }
   100% {
-    transform: translateX(100%) rotate(-15deg); /* End off-screen right */
+    transform: translateX(250%) translateY(-50%) rotate(-30deg); /* End further off-screen right */
     opacity: 0;
   }
 }
 
 .verified-badge {
-  position: relative;
+  position: relative; /* Needed for absolute positioning of shine */
   overflow: hidden; /* Ensure shine stays within bounds */
-  display: inline-block; /* Needed for positioning the shine */
-  vertical-align: middle; /* Align badge nicely with text */
+  /* inline-block and align-middle are set in the component */
 }
 
 /* Adjust the shine element itself */
 .verified-badge-shine {
   position: absolute;
-  top: -10%; /* Adjust position slightly based on new badge shape */
-  left: -10%;
-  width: 120%; /* Cover the whole badge width */
-  height: 120%;
-  /* Use a simpler, softer gradient */
-  background: linear-gradient(105deg, rgba(255,255,255,0) 20%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 80%);
-  transform: translateX(-100%) rotate(-15deg); /* Initial position off-screen, match rotation */
+  top: 50%; /* Center vertically */
+  left: -50%; /* Start off-left */
+  width: 50%; /* Narrower shine */
+  height: 150%; /* Taller shine */
+  /* Use a softer, more focused gradient */
+  background: linear-gradient(
+    105deg,
+    rgba(255, 255, 255, 0) 20%,
+    rgba(255, 255, 255, 0.5) 50%, /* Brighter center */
+    rgba(255, 255, 255, 0) 80%
+  );
+  transform: translateX(-150%) translateY(-50%) rotate(-30deg); /* Initial position and rotation */
   animation: shine 3s ease-in-out infinite; /* Adjusted duration/timing */
   pointer-events: none; /* Don't interfere with clicks */
-  border-radius: 50%; /* Keep shine rounded */
+  border-radius: 50%; /* Elliptical shine */
 }

@@ -1,8 +1,8 @@
 
 "use client";
 
-import React, {useEffect, useState} from 'react';
-import {useRouter, useSearchParams} from 'next/navigation';
+import React, {useEffect, useState, useMemo} from 'react';
+import {useRouter, useSearchParams, useParams} from 'next/navigation';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 import {format} from 'date-fns';
@@ -33,11 +33,13 @@ interface Note {
 const ViewNotePage = () => {
   const searchParams = useSearchParams(); // Keep using the hook
   const router = useRouter();
+  const params = useParams(); // Use useParams
 
-  // Extract parameters directly using searchParams.get()
-  const noteId = searchParams?.get('id');
-  const category = searchParams?.get('category');
-  const fileIndexParam = searchParams?.get('fileIndex');
+   // Extract parameters directly using searchParams.get()
+   const noteId = searchParams?.get('id');
+   // Get category from params or searchParams, prioritizing params
+   const categoryParam = params?.category || searchParams?.get('category');
+   const fileIndexParam = searchParams?.get('fileIndex');
 
 
   const [note, setNote] = useState<Note | null>(null); // Use Note interface
@@ -45,6 +47,19 @@ const ViewNotePage = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false); // State for description expansion
+
+  // Decode category once, using useMemo
+  const category = useMemo(() => {
+     if (!categoryParam || typeof categoryParam !== 'string') {
+       return '';
+     }
+     try {
+       return decodeURIComponent(categoryParam);
+     } catch (e) {
+       console.error("Failed to decode category param:", e);
+       return categoryParam; // Fallback
+     }
+  }, [categoryParam]);
 
   useEffect(() => {
     if (category && noteId) {
@@ -92,9 +107,15 @@ const ViewNotePage = () => {
          console.warn(`No notes found for category ${category}. Redirecting.`);
          router.push(`/categories`);
       }
+    } else if (noteId && !category) { // Handle case where category might be missing but ID exists
+        console.warn(`Missing category in query params for note ID ${noteId}. Redirecting.`);
+        router.push('/');
     } else {
-      console.warn(`Missing category or noteId in query params. Redirecting.`);
-      router.push('/');
+        // console.warn(`Missing category or noteId in query params. Redirecting.`);
+        // Avoid redirect loop if already on home
+        if (window.location.pathname !== '/') {
+           router.push('/');
+        }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category, noteId, fileIndexParam]); // Keep router out of dependencies

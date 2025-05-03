@@ -241,7 +241,7 @@ const AdminUsersPage = () => {
                                             <TableCell className="text-center">
                                                 {user.isVerified ? (
                                                     /* Adjusted badge size - Use h-4 w-4 */
-                                                    <VerifiedBadge className="h-4 w-4 inline" />
+                                                    <VerifiedBadge className="h-4 w-4 inline-block" />
                                                 ) : (
                                                     <XCircle className="h-5 w-5 text-muted-foreground inline" />
                                                 )}

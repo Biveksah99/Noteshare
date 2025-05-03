@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation'; // Correct import
+import { useRouter, useParams } from 'next/navigation'; // Correct import
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from 'date-fns';
@@ -25,8 +25,9 @@ interface Note {
 const DESCRIPTION_PREVIEW_LIMIT = 100; // Limit for description preview
 
 // Changed component signature to accept params prop
-const CategoryDetailPage = ({ params }: { params: { category: string } }) => {
+const CategoryDetailPage = () => {
   const router = useRouter();
+  const params = useParams(); // Use useParams hook
 
   // Decode the category from params using useMemo
    const category = useMemo(() => {
@@ -41,7 +42,7 @@ const CategoryDetailPage = ({ params }: { params: { category: string } }) => {
        console.error("Failed to decode category param:", e);
        return params.category; // Fallback to original if decoding fails
      }
-   }, [params.category]); // Dependency is the raw category string
+   }, [params?.category]); // Dependency is the raw category string
 
 
   const [notes, setNotes] = useState<Note[]>([]); // Use Note interface
@@ -163,4 +164,3 @@ const CategoryDetailPage = ({ params }: { params: { category: string } }) => {
 };
 
 export default CategoryDetailPage;
-
