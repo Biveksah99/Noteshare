@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form'; // Added FormDescription import
 import { auth, db } from '@/lib/firebase'; // Import db if needed for Firestore
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 // import { doc, setDoc } from 'firebase/firestore'; // Import if storing extra data in Firestore
