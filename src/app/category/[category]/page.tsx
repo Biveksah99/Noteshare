@@ -28,21 +28,20 @@ const DESCRIPTION_PREVIEW_LIMIT = 100; // Limit for description preview
 const CategoryDetailPage = ({ params }: { params: { category: string } }) => {
   const router = useRouter();
 
-  // Use React.use to unwrap the promise/value from params
-   const categoryParam = useMemo(() => params.category, [params.category]);
-
+  // Decode the category from params using useMemo
    const category = useMemo(() => {
      // Check if params exists and category property is a string
      if (!params || typeof params.category !== 'string') {
        return ''; // Return empty string if params or category is invalid
      }
      try {
+       // Decode the category parameter directly from params
        return decodeURIComponent(params.category);
      } catch (e) {
        console.error("Failed to decode category param:", e);
        return params.category; // Fallback to original if decoding fails
      }
-   }, [params]); // Dependency is the raw params object
+   }, [params.category]); // Dependency is the raw category string
 
 
   const [notes, setNotes] = useState<Note[]>([]); // Use Note interface
@@ -164,3 +163,4 @@ const CategoryDetailPage = ({ params }: { params: { category: string } }) => {
 };
 
 export default CategoryDetailPage;
+
