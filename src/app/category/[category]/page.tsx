@@ -64,7 +64,7 @@ function CategoryDetailContent() {
           if (Array.isArray(parsedNotes)) {
              // Basic validation for each note
             foundNotes = parsedNotes.filter(note =>
-                note && typeof note === 'object' && note.id && note.title && note.timestamp && note.files && note.uploader
+                note && typeof note === 'object' && note.id && note.title && note.timestamp && note.files && note.uploader && note.uploaderId // Ensure uploaderId exists
             ).map(note => ({ ...note, category: category })) as Note[]; // Ensure category is set
 
           } else {
@@ -141,19 +141,23 @@ function CategoryDetailContent() {
                 <CardHeader className="p-4 flex-shrink-0">
                   <CardTitle className="text-lg mb-1 line-clamp-2">{note.title}</CardTitle>
                   <CardDescription className="text-xs flex items-center flex-wrap mt-1"> {/* Allow wrapping */}
-                   {/* Avatar and uploader name displayed directly, not wrapped in Link */}
-                    <div className="flex items-center mr-1">
-                       <Avatar className="h-5 w-5 mr-1.5 flex-shrink-0 group-hover:opacity-80 transition-opacity">
+                   {/* Link wrapping Avatar and Uploader name */}
+                    <Link
+                      href={`/profile/${note.uploaderId}`}
+                      onClick={(e) => e.stopPropagation()} // Prevent card link click
+                      className="flex items-center mr-1 group/uploader hover:underline"
+                    >
+                       <Avatar className="h-5 w-5 mr-1.5 flex-shrink-0 group-hover/uploader:opacity-80 transition-opacity">
                           <AvatarImage
                             src={note.uploaderProfileImage || `https://picsum.photos/seed/${note.uploader}/20/20`}
                             alt={note.uploader}
                             data-ai-hint="user avatar tiny"
                           />
-                         <AvatarFallback className="text-xs group-hover:bg-muted/80 transition-colors">{note.uploader ? note.uploader.substring(0, 1).toUpperCase() : '?'}</AvatarFallback>
+                         <AvatarFallback className="text-xs group-hover/uploader:bg-muted/80 transition-colors">{note.uploader ? note.uploader.substring(0, 1).toUpperCase() : '?'}</AvatarFallback>
                        </Avatar>
-                       <span className="font-medium group-hover:underline">{note.uploader}</span>
+                       <span className="font-medium mr-0.5">{note.uploader}</span>
                        {note.uploaderIsVerified && <VerifiedBadge className="h-3.5 w-3.5 ml-0.5 flex-shrink-0" />}
-                    </div>
+                    </Link>
                     <span className="mx-1">·</span>
                     <span title={new Date(note.timestamp).toLocaleString()}> {/* Add title for exact time */}
                         {format(new Date(note.timestamp), 'MMM d, yyyy')}

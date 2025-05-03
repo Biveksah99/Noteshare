@@ -84,7 +84,7 @@ function ViewNoteContent() {
              if (noteWithCategory.uploaderIsVerified === undefined) {
                 noteWithCategory.uploaderIsVerified = true; // Force verified for testing
              }
-             // --- REMOVE THIS LINE AFTER TESTING ---
+             // --- END TEMPORARY ---
 
 
             const initialFileIndex = fileIndexParam ? parseInt(fileIndexParam as string, 10) : 0;
@@ -120,8 +120,8 @@ function ViewNoteContent() {
     const encodedCategory = typeof category === 'string' ? encodeURIComponent(category) : '';
     // Ensure noteId is a string or handle appropriately
     const currentNoteId = typeof noteId === 'string' ? noteId : '';
-    // Use replace for non-navigational updates
-    // router.replace(`/view-note?id=${currentNoteId}&category=${encodedCategory}&fileIndex=${newIndex}`, { scroll: false });
+    // Use push/replace for URL updates without full page reload if needed
+    // window.history.replaceState(null, '', `/view-note?id=${currentNoteId}&category=${encodedCategory}&fileIndex=${newIndex}`);
   }, [router, noteId, category]); // Add dependencies
 
   const handlePrevClick = () => {
@@ -190,21 +190,26 @@ function ViewNoteContent() {
     <div className="container mx-auto p-4 md:p-6"> {/* Adjusted padding */}
       <Card className="mb-4 neumorphic bg-card shadow-lg rounded-lg overflow-hidden">
         <CardHeader className="flex flex-row items-start p-4 border-b bg-muted/30"> {/* items-start */}
-          {/* Avatar and uploader info displayed directly, not wrapped in Link */}
-          <div className="flex items-center mr-4 flex-shrink-0 mt-1">
-            <Avatar className="mr-2 h-10 w-10">
+          {/* Wrap Avatar and Uploader name in a Link */}
+          <Link
+            href={`/profile/${note.uploaderId}`} // Link to user's profile
+            className="flex items-center mr-4 flex-shrink-0 mt-1 group hover:underline"
+          >
+            <Avatar className="mr-2 h-10 w-10 group-hover:opacity-80 transition-opacity">
               <AvatarImage
                 src={note.uploaderProfileImage || `https://picsum.photos/seed/${note.uploader}/40/40`}
                 alt={note.uploader || 'Uploader'}
                 data-ai-hint="user avatar"
-                className="group-hover:opacity-80 transition-opacity"
               />
               <AvatarFallback className="group-hover:bg-muted/80 transition-colors">{note.uploader ? note.uploader.substring(0, 2).toUpperCase() : '??'}</AvatarFallback>
             </Avatar>
-            <span className="font-medium mr-0.5 group-hover:underline">{note.uploader || 'Unknown User'}</span>
-             {/* Adjusted badge size and margin */}
-            {note.uploaderIsVerified && <VerifiedBadge className="h-4 w-4 ml-0.5 flex-shrink-0" />} {/* Adjusted size */}
-          </div>
+            <span className="font-medium mr-0.5 flex items-center">
+               <span>{note.uploader || 'Unknown User'}</span>
+               {/* Adjusted badge size and margin */}
+               {note.uploaderIsVerified && <VerifiedBadge className="h-4 w-4 ml-0.5 flex-shrink-0" />}
+            </span>
+          </Link>
+          {/* Note Title and Timestamp (not linked) */}
           <div className="flex-1 min-w-0">
             <CardTitle className="text-xl truncate">{note.title || 'Untitled Note'}</CardTitle>
             <CardDescription className="text-xs flex items-center flex-wrap mt-1"> {/* Added mt-1 */}

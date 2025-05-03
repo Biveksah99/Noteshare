@@ -12,6 +12,7 @@ import { VerifiedBadge } from '@/components/ui/verified-badge'; // Import the ne
 import {format} from 'date-fns';
 import Link from "next/link";
 
+
 // Updated announcements
 const announcements = [
   {
@@ -68,14 +69,15 @@ const Home = () => {
 
       try {
         const item = localStorage.getItem(key);
-        if (item && typeof item === 'string') { // Check if item is a string
+        // Ensure item is a non-empty string before parsing
+        if (item && typeof item === 'string' && item.trim() !== '') {
           try {
             const parsedItem = JSON.parse(item);
             // Ensure it's an array of notes
             if (Array.isArray(parsedItem)) {
                parsedItem.forEach((note: any) => {
                  // Basic validation for note structure
-                 if(note && typeof note === 'object' && note.id && note.title && note.timestamp && note.files) {
+                 if(note && typeof note === 'object' && note.id && note.title && note.timestamp && note.files && note.uploaderId) { // Ensure uploaderId exists
                     // Add category if missing (might happen with older data)
                     if (!note.category) {
                        note.category = key;
@@ -92,7 +94,7 @@ const Home = () => {
                      }
                     uploads.push(note as Note); // Add validated note
                  } else {
-                   console.warn(`Skipping invalid note structure in category ${key}:`, note);
+                   console.warn(`Skipping invalid note structure or missing uploaderId in category ${key}:`, note);
                  }
                });
             } else {
@@ -102,14 +104,14 @@ const Home = () => {
             }
           } catch (e) {
             // Gracefully handle non-JSON items or parsing errors
-            if (!(e instanceof SyntaxError)) {
-              console.error(`Failed to process item from localStorage for key ${key}.`, e);
-            } else {
+            if (e instanceof SyntaxError) {
                // console.warn(`Item with key ${key} is not valid JSON, skipping.`);
+            } else {
+               console.error(`Failed to process item from localStorage for key ${key}.`, e);
             }
           }
         } else {
-          // console.warn(`Item with key ${key} is not a string or is null, skipping.`);
+          // console.warn(`Item with key ${key} is not a string or is null/empty, skipping.`);
         }
       } catch (e) {
         console.error("Failed to retrieve or process item from localStorage", e);
@@ -200,28 +202,30 @@ const Home = () => {
                   <Link key={upload.id} href={`/view-note?id=${upload.id}&category=${encodeURIComponent(upload.category)}`} className="block group">
                     <Card className="neumorphic h-full transition-shadow duration-200 group-hover:shadow-lg overflow-hidden"> {/* Added overflow hidden */}
                       <CardHeader className="flex flex-row items-start space-x-3 p-4"> {/* Use items-start */}
-                        {/* Avatar displayed directly, not wrapped in a Link */}
-                        <div className="flex-shrink-0 mt-1">
-                          <Avatar className="h-10 w-10 group-hover:opacity-80 transition-opacity">
+                        {/* Wrap Avatar and Name in a Link to the profile, stop propagation */}
+                        <Link
+                          href={`/profile/${upload.uploaderId}`}
+                          onClick={(e) => e.stopPropagation()} // Prevent card link click
+                          className="flex items-center flex-shrink-0 mt-1 group/uploader hover:underline"
+                        >
+                          <Avatar className="h-10 w-10 mr-2 group-hover/uploader:opacity-80 transition-opacity">
                             <AvatarImage
                                 src={upload.uploaderProfileImage || `https://picsum.photos/seed/${upload.uploader}/40/40`}
                                 alt={upload.uploader}
                                 data-ai-hint="user avatar"
                               />
-                            <AvatarFallback className="group-hover:bg-muted/80 transition-colors">{upload.uploader ? upload.uploader.substring(0, 2).toUpperCase() : '??'}</AvatarFallback>
+                            <AvatarFallback className="group-hover/uploader:bg-muted/80 transition-colors">{upload.uploader ? upload.uploader.substring(0, 2).toUpperCase() : '??'}</AvatarFallback>
                           </Avatar>
-                        </div>
+                          <span className="font-medium mr-0.5 flex items-center">
+                             <span>{upload.uploader}</span>
+                             {/* Adjusted badge size and margin */}
+                             {upload.uploaderIsVerified && <VerifiedBadge className="h-3.5 w-3.5 ml-0.5 flex-shrink-0 inline-block align-middle" />}
+                          </span>
+                        </Link>
+                        {/* Note Title and Timestamp (not linked to profile) */}
                         <div className="flex-1 min-w-0">
                           <CardTitle className="text-lg line-clamp-1">{upload.title}</CardTitle>
                           <CardDescription className="text-xs flex items-center flex-wrap mt-1"> {/* Added margin top */}
-                             Uploaded by&nbsp;
-                             {/* Uploader name displayed directly, not wrapped in a Link */}
-                              <span className="font-medium mr-0.5">
-                                  <span>{upload.uploader}</span>
-                                   {/* Adjusted badge size and margin */}
-                                   {upload.uploaderIsVerified && <VerifiedBadge className="h-3.5 w-3.5 ml-0.5 flex-shrink-0 inline-block align-middle" />}
-                              </span>
-                             <span className="mx-1">&middot;</span>
                              {format(new Date(upload.timestamp), 'MMM d, yyyy')}
                              <span className="mx-1">&middot;</span>
                              <span className="font-semibold capitalize">{upload.category}</span> {/* Show category */}
