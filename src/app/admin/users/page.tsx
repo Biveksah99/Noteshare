@@ -3,72 +3,94 @@
 
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '@/lib/firebase';
-import { collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, where, getDoc } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { XCircle, Search } from 'lucide-react';
+import { XCircle, Search, Loader2, ShieldAlert } from 'lucide-react'; // Added Loader2, ShieldAlert
 import { VerifiedBadge } from '@/components/ui/verified-badge'; // Import the new badge
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
-// Define User interface matching Firestore structure (or localStorage for this example)
+// Define User interface matching Firestore structure
 interface UserProfile {
-    id: string; // Use UID as ID if using Firestore Auth, or a unique identifier
+    id: string; // Firestore Document ID (usually UID)
     fullName: string;
     email?: string;
     isVerified: boolean;
     // Add other fields as needed
 }
 
-// Simple check if the current user is an admin (replace with actual logic)
-const isAdminUser = (userId: string | undefined): boolean => {
-    // In a real app, check against a list of admin UIDs in Firestore or a custom claim
-    const ADMIN_UIDS = ["adminUserId", "anotherAdminUid"]; // Replace with actual Admin UIDs
-    // For demo purposes, let's assume any logged-in user can be admin for now
-    // return !!userId && ADMIN_UIDS.includes(userId);
-    return !!userId; // Allowing any logged-in user to be admin for easier testing
+// Fetch admin status for the current user from Firestore
+const checkAdminStatus = async (userId: string): Promise<boolean> => {
+  if (!userId) return false;
+  try {
+    const adminDocRef = doc(db, 'admins', userId); // Assuming 'admins' collection with UIDs as doc IDs
+    const adminDoc = await getDoc(adminDocRef);
+    return adminDoc.exists(); // User is an admin if their UID exists in the 'admins' collection
+  } catch (error) {
+    console.error("Error checking admin status:", error);
+    return false;
+  }
 };
+
 
 const AdminUsersPage = () => {
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
+    const [isAdmin, setIsAdmin] = useState(false); // State to hold admin status
+    const [checkingAdmin, setCheckingAdmin] = useState(true); // State for admin check loading
     const [currentUser, authLoading, authError] = useAuthState(auth);
     const { toast } = useToast();
     const router = useRouter();
 
-    // Redirect if not admin or not logged in (kept original logic here)
+    // Check admin status and redirect if necessary
     useEffect(() => {
-        // For actual deployment, revert the isAdminUser check to the original version
-        const ACTUAL_ADMIN_UIDS = ["adminUserId", "anotherAdminUid"];
-        const isActualAdmin = !!currentUser && ACTUAL_ADMIN_UIDS.includes(currentUser.uid);
+        const verifyAdmin = async () => {
+            if (authLoading) return; // Wait for auth state to load
 
-        if (!authLoading && !isActualAdmin) { // Use the actual admin check here for redirection
-            toast({
-                variant: "destructive",
-                title: "Access Denied",
-                description: "You do not have permission to view this page.",
-            });
-            router.push('/'); // Redirect to home or login page
-        }
+            if (!currentUser) {
+                toast({
+                    variant: "destructive",
+                    title: "Access Denied",
+                    description: "Please log in to view this page.",
+                });
+                router.replace('/login'); // Redirect to login if not logged in
+                return;
+            }
+
+            setCheckingAdmin(true);
+            const isAdminResult = await checkAdminStatus(currentUser.uid);
+            setIsAdmin(isAdminResult);
+            setCheckingAdmin(false);
+
+            if (!isAdminResult) {
+                toast({
+                    variant: "destructive",
+                    title: "Access Denied",
+                    description: "You do not have permission to view this page.",
+                });
+                router.replace('/'); // Redirect to home if not admin
+            }
+        };
+
+        verifyAdmin();
     }, [currentUser, authLoading, router, toast]);
 
-    // Fetch users (using localStorage for demo - adapt for Firestore)
+
+    // Fetch users from Firestore only if the current user is confirmed as admin
     useEffect(() => {
-        // Using the broader isAdminUser check for fetching data during testing
-        if (isAdminUser(currentUser?.uid)) {
+        if (isAdmin) { // Only fetch if isAdmin is true
             setLoading(true);
-            // --- Firestore Example (Commented out for localStorage demo) ---
-            /*
             const fetchUsers = async () => {
                 try {
-                    const usersCol = collection(db, 'users'); // Assuming 'users' collection
+                    const usersCol = collection(db, 'users'); // Assuming 'users' collection in Firestore
                     const userSnapshot = await getDocs(usersCol);
                     const userList = userSnapshot.docs.map(doc => ({
-                        id: doc.id,
+                        id: doc.id, // Use Firestore document ID
                         ...doc.data()
                     } as UserProfile));
                     setUsers(userList);
@@ -84,52 +106,23 @@ const AdminUsersPage = () => {
                 }
             };
             fetchUsers();
-            */
-
-            // --- localStorage Demo ---
-            try {
-                // Attempt to get user list from localStorage.
-                // For demo, we'll assume multiple profiles might be stored under different keys,
-                // or just the single 'userProfile' key for simplicity.
-                const fetchedUsers: UserProfile[] = [];
-                // Example: Load just the 'userProfile'
-                const profileRaw = localStorage.getItem('userProfile');
-                if (profileRaw) {
-                     try {
-                         const profileData = JSON.parse(profileRaw);
-                         // Simulate a user list with one user for demo
-                         fetchedUsers.push({
-                             id: profileData.email || 'unknown-id-' + Date.now(), // Use email or generate pseudo-ID
-                             fullName: profileData.fullName || 'Unknown User',
-                             email: profileData.email,
-                             isVerified: profileData.isVerified || false, // Load verification status
-                         });
-                     } catch (e) {
-                         console.error("Failed to parse user profile from localStorage", e);
-                     }
-                }
-                // In a real scenario with multiple users in localStorage (less common),
-                // you might iterate keys or use a 'userList' key.
-                setUsers(fetchedUsers);
-             } catch (error) {
-                 console.error("Error fetching users from localStorage:", error);
-                 toast({ variant: "destructive", title: "Error", description: "Could not load users from local storage." });
-             } finally {
-                 setLoading(false);
-             }
-             // --- End localStorage Demo ---
-
+        } else {
+            // If not admin, ensure user list is empty and loading is false
+            setUsers([]);
+            setLoading(false);
         }
-    }, [currentUser, toast]); // Re-fetch if currentUser changes
+    }, [isAdmin, toast]); // Re-fetch if isAdmin status changes
+
 
     const toggleVerification = async (userId: string, currentState: boolean) => {
-         // --- Firestore Example ---
-        /*
-        const userRef = doc(db, 'users', userId);
+        if (!isAdmin) return; // Extra check
+
+        const userRef = doc(db, 'users', userId); // Reference to the user document in Firestore
         try {
             await updateDoc(userRef, {
                 isVerified: !currentState
             });
+            // Update local state optimistically
             setUsers(prevUsers => prevUsers.map(user =>
                 user.id === userId ? { ...user, isVerified: !currentState } : user
             ));
@@ -137,6 +130,22 @@ const AdminUsersPage = () => {
                 title: "Success",
                 description: `User verification ${!currentState ? 'granted' : 'revoked'}.`,
             });
+
+             // Also update localStorage 'userProfile' if the modified user is the *current* user
+             if (currentUser && currentUser.uid === userId) {
+                 try {
+                     const profileRaw = localStorage.getItem('userProfile');
+                     if (profileRaw) {
+                         const profileData = JSON.parse(profileRaw);
+                         profileData.isVerified = !currentState;
+                         localStorage.setItem('userProfile', JSON.stringify(profileData));
+                         console.log("Updated current user's verification status in localStorage.");
+                     }
+                 } catch (e) {
+                     console.error("Failed to update current user's verification status in localStorage:", e);
+                 }
+             }
+
         } catch (error) {
             console.error("Error updating verification status:", error);
             toast({
@@ -145,43 +154,6 @@ const AdminUsersPage = () => {
                 description: "Failed to update verification status.",
             });
         }
-        */
-
-         // --- localStorage Demo ---
-         try {
-            // Find the user profile in the state, update it, and save back to localStorage
-            const userIndex = users.findIndex(u => u.id === userId);
-            if (userIndex !== -1) {
-                const updatedUsers = [...users];
-                const userToUpdate = { ...updatedUsers[userIndex], isVerified: !currentState };
-                updatedUsers[userIndex] = userToUpdate;
-                setUsers(updatedUsers);
-
-                // Assuming the user profile is stored under 'userProfile' key for simplicity.
-                // In a multi-user localStorage scenario, you'd need a way to identify the correct profile to update.
-                 const profileRaw = localStorage.getItem('userProfile');
-                 if (profileRaw) {
-                     const profileData = JSON.parse(profileRaw);
-                     // Match by ID (which might be email or generated ID in this demo)
-                     if (profileData.email === userToUpdate.email || userToUpdate.id.startsWith('unknown-id-')) {
-                         profileData.isVerified = userToUpdate.isVerified;
-                         localStorage.setItem('userProfile', JSON.stringify(profileData));
-                         toast({ title: "Success", description: `User verification ${!currentState ? 'granted' : 'revoked'}.` });
-                     } else {
-                          toast({ variant: "destructive", title: "Warning", description: "Local storage profile might not match the updated user." });
-                     }
-                 } else {
-                      toast({ variant: "destructive", title: "Error", description: "User profile not found in local storage for update." });
-                 }
-
-             } else {
-                 toast({ variant: "destructive", title: "Error", description: "User not found in the current list." });
-             }
-         } catch (error) {
-             console.error("Error updating verification in localStorage:", error);
-             toast({ variant: "destructive", title: "Error", description: "Failed to update local verification status." });
-         }
-        // --- End localStorage Demo ---
     };
 
     const filteredUsers = users.filter(user =>
@@ -189,21 +161,41 @@ const AdminUsersPage = () => {
         user.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    if (authLoading || loading) {
-        return <div className="container mx-auto p-6 text-center">Loading admin panel...</div>;
+    if (authLoading || checkingAdmin) {
+        return (
+          <div className="container mx-auto p-6 flex justify-center items-center min-h-[calc(100vh-8rem)]">
+             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+             <span className="ml-2">Loading admin panel...</span>
+          </div>
+        );
     }
 
-    // Use the actual admin check for rendering the final UI
-    const ACTUAL_ADMIN_UIDS = ["adminUserId", "anotherAdminUid"];
-    const isActualAdmin = !!currentUser && ACTUAL_ADMIN_UIDS.includes(currentUser.uid);
-    if (!isActualAdmin) {
-         // Although redirection is handled by useEffect, this provides an immediate fallback UI
-        return <div className="container mx-auto p-6 text-center text-red-500">Access Denied.</div>;
+    // If finished checking and not admin, show access denied (though redirect should have happened)
+    if (!isAdmin) {
+         return (
+           <div className="container mx-auto p-6 flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] text-center">
+              <ShieldAlert className="h-16 w-16 text-destructive mb-4" />
+              <h1 className="text-2xl font-semibold text-destructive mb-2">Access Denied</h1>
+              <p className="text-muted-foreground">You do not have permission to view this page.</p>
+              <Button onClick={() => router.push('/')} className="mt-6">Go to Home</Button>
+           </div>
+         );
     }
+
+     // Show loading indicator for user data fetching
+    if (loading) {
+       return (
+          <div className="container mx-auto p-6 flex justify-center items-center min-h-[calc(100vh-8rem)]">
+             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+             <span className="ml-2">Loading users...</span>
+          </div>
+        );
+    }
+
 
     return (
         <div className="container mx-auto p-6">
-            <Card className="neumorphic">
+            <Card className="neumorphic bg-card">
                 <CardHeader>
                     <CardTitle className="text-2xl">Manage Users</CardTitle>
                 </CardHeader>
@@ -233,9 +225,12 @@ const AdminUsersPage = () => {
                                     filteredUsers.map((user) => (
                                         <TableRow key={user.id}>
                                             <TableCell className="font-medium flex items-center">
-                                                <span>{user.fullName}</span>
-                                                 {/* Adjusted badge size and margin - Use h-4 w-4 */}
-                                                {user.isVerified && <VerifiedBadge className="ml-1.5 h-4 w-4 flex-shrink-0" />}
+                                                 {/* Link name to user's profile page */}
+                                                <Link href={`/profile/${user.id}`} className="hover:underline flex items-center">
+                                                   <span>{user.fullName}</span>
+                                                    {/* Adjusted badge size and margin - Use h-4 w-4 */}
+                                                   {user.isVerified && <VerifiedBadge className="ml-1.5 h-4 w-4 flex-shrink-0" />}
+                                                </Link>
                                             </TableCell>
                                             <TableCell>{user.email || 'N/A'}</TableCell>
                                             <TableCell className="text-center">

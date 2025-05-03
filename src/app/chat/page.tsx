@@ -10,12 +10,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Paperclip, Send, Image as ImageIcon, File as FileIcon, Users } from 'lucide-react'; // Added Users icon
+import { Paperclip, Send, Image as ImageIcon, File as FileIcon, Users, Loader2 } from 'lucide-react'; // Added Users icon & Loader2
 import { VerifiedBadge } from '@/components/ui/verified-badge'; // Import the new badge
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
+import { useRouter } from 'next/navigation'; // Import useRouter for redirection
 
 interface Message {
     id: string;
@@ -47,44 +48,47 @@ const getUserProfileInfo = async (userId: string): Promise<UserProfileInfo> => {
     // In a real app, you'd likely fetch from Firestore for accuracy.
     const profileRaw = localStorage.getItem('userProfile');
     let profileData: UserProfileInfo = { fullName: 'User', profileImage: null, isVerified: false };
+    let currentUserAuth = auth.currentUser; // Get current auth user
 
     if (profileRaw) {
         try {
             const parsedProfile = JSON.parse(profileRaw);
-            // Match using user ID if available, otherwise try email (assuming user ID is stored in profile)
-            // Note: This demo relies on the current user's profile being the one in localStorage
-            // For other users, it would ideally fetch from Firestore.
-            if (auth.currentUser && auth.currentUser.uid === userId && parsedProfile.email === auth.currentUser.email) {
+            // Match using user ID if available (check if stored ID matches current auth user ID)
+            if (currentUserAuth && parsedProfile.id === currentUserAuth.uid) {
                  profileData = {
-                    fullName: parsedProfile.fullName || auth.currentUser.displayName || 'User',
-                    profileImage: parsedProfile.profileImage || auth.currentUser.photoURL || null,
+                    fullName: parsedProfile.fullName || currentUserAuth.displayName || 'User',
+                    profileImage: parsedProfile.profileImage || currentUserAuth.photoURL || null,
                     isVerified: parsedProfile.isVerified || false,
                  };
             } else {
                 // TODO: Implement Firestore fetch for other users if needed
-                 console.warn(`Fetching profile for user ${userId} from localStorage failed or didn't match. Using defaults.`);
+                 console.warn(`Fetching profile for user ${userId} from localStorage failed or didn't match. Using defaults or auth data.`);
                  // Attempt to get display name/photo from auth object if it's the current user
-                 if (auth.currentUser && auth.currentUser.uid === userId) {
-                     profileData.fullName = auth.currentUser.displayName || 'User';
-                     profileData.profileImage = auth.currentUser.photoURL || null;
+                 if (currentUserAuth && currentUserAuth.uid === userId) {
+                     profileData.fullName = currentUserAuth.displayName || 'User';
+                     profileData.profileImage = currentUserAuth.photoURL || null;
+                     // Fetch isVerified status from Firestore for the current user if needed,
+                     // or rely on the potentially outdated localStorage version for now.
                  }
-                  // For now, keep isVerified false for others if not found
+                  // For now, keep isVerified false for others if not found in localStorage
             }
         } catch (e) {
             console.error("Failed to parse user profile for info", e);
-             if (auth.currentUser && auth.currentUser.uid === userId) {
-                 profileData.fullName = auth.currentUser.displayName || 'User';
-                 profileData.profileImage = auth.currentUser.photoURL || null;
+             if (currentUserAuth && currentUserAuth.uid === userId) {
+                 profileData.fullName = currentUserAuth.displayName || 'User';
+                 profileData.profileImage = currentUserAuth.photoURL || null;
              }
         }
-    } else if (auth.currentUser && auth.currentUser.uid === userId) {
+    } else if (currentUserAuth && currentUserAuth.uid === userId) {
          // Fallback to auth object if no localStorage profile
-         profileData.fullName = auth.currentUser.displayName || 'User';
-         profileData.profileImage = auth.currentUser.photoURL || null;
+         profileData.fullName = currentUserAuth.displayName || 'User';
+         profileData.profileImage = currentUserAuth.photoURL || null;
+          // Fetch isVerified status from Firestore here if crucial
     }
 
     // --- TEMPORARY FOR TESTING BLUE TICK ---
-    if (auth.currentUser && auth.currentUser.uid === userId) {
+    // Only apply to the current user for testing
+    if (currentUserAuth && currentUserAuth.uid === userId) {
          profileData.isVerified = true; // Force verified for current user for testing
     }
     // --- END TEMPORARY ---
@@ -101,8 +105,15 @@ const ChatPage = () => {
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
-    // No need for adminDetails or specific user verification state here,
-    // verification status is per-message sender
+    const router = useRouter(); // Initialize router
+
+    // Redirect if not authenticated
+    useEffect(() => {
+        if (!authLoading && !user) {
+            router.replace('/login');
+        }
+    }, [user, authLoading, router]);
+
 
     const scrollToBottom = useCallback(() => {
         const scrollViewport = scrollAreaRef.current?.querySelector<HTMLDivElement>('[data-radix-scroll-area-viewport]');
@@ -116,34 +127,37 @@ const ChatPage = () => {
 
     // Fetch messages from the global group chat
     useEffect(() => {
-        // No need to check for user here initially, anyone can view (if permissions allow)
-        // Auth check happens before sending messages.
-        const messagesRef = collection(db, 'chats', GROUP_CHAT_ID, 'messages');
-        const q = query(messagesRef, orderBy('timestamp', 'asc'));
+        // Only fetch if user is authenticated
+        if (user) {
+            const messagesRef = collection(db, 'chats', GROUP_CHAT_ID, 'messages');
+            const q = query(messagesRef, orderBy('timestamp', 'asc'));
 
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const msgs = querySnapshot.docs.map(doc => {
-                 const data = doc.data();
-                // Message data should already contain sender info (name, photo, verified status)
-                // If not, you'd fetch it here based on data.senderId, but storing it is more efficient.
-                return {
-                    id: doc.id,
-                    ...data,
-                } as Message;
+            const unsubscribe = onSnapshot(q, (querySnapshot) => {
+                const msgs = querySnapshot.docs.map(doc => {
+                     const data = doc.data();
+                    // Message data should already contain sender info (name, photo, verified status)
+                    return {
+                        id: doc.id,
+                        ...data,
+                    } as Message;
+                });
+                setMessages(msgs);
+                 setTimeout(scrollToBottom, 100); // Scroll after messages update
+            }, (error) => {
+                console.error("Error fetching messages: ", error);
+                toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: "Could not load chat messages.",
+                });
             });
-            setMessages(msgs);
-             setTimeout(scrollToBottom, 100); // Scroll after messages update
-        }, (error) => {
-            console.error("Error fetching messages: ", error);
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Could not load chat messages.",
-            });
-        });
 
-        return () => unsubscribe();
-    }, [scrollToBottom, toast]); // Removed dependencies on user, adminDetails, etc.
+            return () => unsubscribe();
+        } else {
+            // Clear messages if user logs out
+            setMessages([]);
+        }
+    }, [user, scrollToBottom, toast]); // Depend on user
 
 
     const sendMessage = async () => {
@@ -233,8 +247,18 @@ const ChatPage = () => {
         fileInputRef.current?.click();
     };
 
-     // Show login prompt if not logged in
-     if (!user && !authLoading) {
+     // Show loading indicator while auth is checking
+     if (authLoading) {
+        return (
+          <div className="container mx-auto p-6 flex justify-center items-center min-h-[calc(100vh-8rem)]">
+             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+             <span className="ml-2">Loading chat...</span>
+          </div>
+        );
+    }
+
+     // Show login prompt if not logged in after loading
+     if (!user) {
         return (
             <div className="container mx-auto p-6 flex justify-center items-center h-[calc(100vh-10rem)]">
                  <Card className="w-full max-w-md neumorphic">
@@ -243,17 +267,13 @@ const ChatPage = () => {
                     </CardHeader>
                      <CardContent>
                         <p>Please log in to participate in the group chat.</p>
-                        <Link href="/profile">
-                            <Button className="mt-4">Go to Profile/Login</Button>
+                        <Link href="/login"> {/* Changed link to /login */}
+                            <Button className="mt-4">Go to Login</Button>
                         </Link>
                     </CardContent>
                 </Card>
             </div>
         );
-    }
-    // Optional: Add loading indicator while auth is checking
-     if (authLoading) {
-        return <div className="container mx-auto p-6 text-center">Loading chat...</div>;
     }
 
 
@@ -366,5 +386,3 @@ const ChatPage = () => {
 };
 
 export default ChatPage;
-
-    

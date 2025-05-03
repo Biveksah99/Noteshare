@@ -1,3 +1,4 @@
+
 "use client"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -21,7 +22,7 @@ import { useRouter } from "next/navigation"
 import { useState, useRef, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { Edit, Check, Crop, User as UserIcon, LogOut } from "lucide-react" // Added LogOut icon
+import { Edit, Check, Crop, User as UserIcon, LogOut, Loader2 } from "lucide-react" // Added LogOut icon & Loader2
 import { VerifiedBadge } from '@/components/ui/verified-badge'; // Import the new badge
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import ReactCrop, { type Crop as CropType, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop'
@@ -30,6 +31,7 @@ import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { auth } from "@/lib/firebase"; // Import Firebase auth
 import { signOut } from "firebase/auth"; // Import signOut function
+import { useAuthState } from 'react-firebase-hooks/auth'; // Import useAuthState
 
 // ~60 words * 5 chars/word = 300 characters
 const BIO_MAX_LENGTH = 300;
@@ -130,74 +132,103 @@ const ProfilePage = () => {
   const imgRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null); // Ref for file input
   const aspect = 1; // For square profile picture
+  const [user, authLoading] = useAuthState(auth); // Get user state
 
   const form = useForm<FormValues>({
-    resolver: async (data, context, options) => {
-      // Use Zod resolver
-      const result = formSchema.safeParse(data);
-      if (!result.success) {
-        return { values: {}, errors: result.error.flatten().fieldErrors };
-      }
-      return { values: result.data, errors: {} };
-    },
+    resolver: zodResolver(formSchema), // Use zod resolver directly
     defaultValues: {
-      fullName: "", // Start with empty or placeholder values
+      fullName: "",
       email: "",
       gender: undefined,
       contactNumber: "",
       address: "",
       section: "",
       bio: "",
-      isVerified: false, // Default verification status
+      isVerified: false,
     },
   })
 
-  // Load profile data from localStorage on mount
+   // Redirect if not authenticated
   useEffect(() => {
-    const savedProfile = localStorage.getItem('userProfile');
-    let loadedData = { ...form.formState.defaultValues, isVerified: false }; // Start with defaults
-
-    if (savedProfile) {
-      try {
-        const profileData = JSON.parse(savedProfile);
-        // Ensure default values are handled if fields are missing
-        const defaults = form.formState.defaultValues;
-        // Merge loaded data with defaults
-        loadedData = {
-          ...defaults,
-          ...profileData,
-          isVerified: profileData.isVerified || false // Load actual or default verification
-        };
-        if (profileData.profileImage) {
-            setProfileImage(profileData.profileImage);
-        } else {
-           // Set a default image if none is saved
-           setProfileImage("https://picsum.photos/id/237/200/300");
-        }
-      } catch (error) {
-        console.error("Failed to parse profile data from localStorage", error);
-        // Set default image if loading fails
-        setProfileImage("https://picsum.photos/id/237/200/300");
-        // Reset with default verification status on error
-        loadedData.isVerified = false;
-      }
-    } else {
-        // Set default image if no profile exists
-        setProfileImage("https://picsum.photos/id/237/200/300");
-        // Reset with default verification status if no profile
-        loadedData.isVerified = false;
+    if (!authLoading && !user) {
+      router.replace('/login'); // Redirect to login page
     }
+  }, [user, authLoading, router]);
 
-    // --- TEMPORARY FOR TESTING BLUE TICK ---
-    loadedData.isVerified = true; // Force verified status for testing
-    // --- REMOVE THIS LINE AFTER TESTING ---
 
-    form.reset(loadedData); // Update form with possibly modified data
+  // Load profile data from localStorage when authenticated user is available
+  useEffect(() => {
+    if (user) { // Only load if user is authenticated
+      const savedProfile = localStorage.getItem('userProfile');
+      let loadedData = { ...form.formState.defaultValues, isVerified: false }; // Start with defaults
 
-  }, [form]);
+      if (savedProfile) {
+        try {
+          const profileData = JSON.parse(savedProfile);
+          // Basic check if loaded profile likely belongs to current user (e.g., by email)
+          if (profileData.email === user.email) {
+            const defaults = form.formState.defaultValues;
+            loadedData = {
+              ...defaults,
+              ...profileData,
+              // Ensure fullName and email from auth are prioritized if missing/different
+              fullName: profileData.fullName || user.displayName || '',
+              email: profileData.email || user.email || '',
+              isVerified: profileData.isVerified || false // Load actual or default verification
+            };
+            setProfileImage(profileData.profileImage || null); // Load saved image or null
+          } else {
+            // Profile in localStorage doesn't match current user, reset to defaults based on auth user
+            console.warn("localStorage profile does not match logged-in user. Initializing from auth data.");
+             loadedData = {
+                ...form.formState.defaultValues,
+                fullName: user.displayName || '',
+                email: user.email || '',
+                isVerified: false, // Default for new/mismatched profile
+                // id: user.uid, // Optionally store UID here too
+             };
+            setProfileImage(user.photoURL || null); // Use auth photoURL or null
+            // Optionally clear the mismatched localStorage entry
+            // localStorage.removeItem('userProfile');
+          }
+        } catch (error) {
+          console.error("Failed to parse profile data from localStorage", error);
+          // Initialize with auth data if parsing fails
+           loadedData = {
+               ...form.formState.defaultValues,
+               fullName: user.displayName || '',
+               email: user.email || '',
+               isVerified: false,
+           };
+          setProfileImage(user.photoURL || null);
+        }
+      } else {
+          // No profile in localStorage, initialize with auth data
+           loadedData = {
+               ...form.formState.defaultValues,
+               fullName: user.displayName || '',
+               email: user.email || '',
+               isVerified: false, // Default for new profile
+           };
+          setProfileImage(user.photoURL || null);
+      }
+
+      // --- TEMPORARY FOR TESTING BLUE TICK ---
+      loadedData.isVerified = true; // Force verified status for testing
+      // --- REMOVE THIS LINE AFTER TESTING ---
+
+      form.reset(loadedData); // Update form with loaded or initialized data
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, form]); // Depend on user
 
 
   async function onSubmit(values: FormValues) {
+    if (!user) {
+      toast({ variant: "destructive", title: "Error", description: "You must be logged in to update your profile." });
+      return;
+    }
+
     setIsLoading(true)
     console.log("Updating profile with:", values); // Log values being saved
      // Simulate a delay
@@ -212,6 +243,7 @@ const ProfilePage = () => {
       const profileToSave = {
          ...values,
          profileImage,
+         id: user.uid, // Ensure UID is saved
          // --- TEMPORARY FOR TESTING BLUE TICK ---
          // isVerified: currentProfile.isVerified || values.isVerified || false // Preserve existing or use form value, default false
          isVerified: true // Keep forced true for testing, revert later
@@ -219,6 +251,20 @@ const ProfilePage = () => {
        };
       localStorage.setItem('userProfile', JSON.stringify(profileToSave));
       console.log("Profile saved to localStorage:", profileToSave);
+
+      // Optionally update Firebase Auth profile too (displayName, photoURL)
+       try {
+         await updateProfile(user, {
+           displayName: values.fullName,
+           photoURL: profileImage, // Update photoURL in Auth
+         });
+         console.log("Firebase Auth profile updated.");
+       } catch (authError) {
+         console.error("Failed to update Firebase Auth profile:", authError);
+         // Optionally notify user, but saving to localStorage already succeeded
+       }
+
+
       form.reset(profileToSave); // Update form state after saving
     } catch (error) {
       console.error("Failed to save profile data to localStorage", error);
@@ -276,6 +322,8 @@ const ProfilePage = () => {
   }
 
   const handleCropAndSave = async () => {
+     if (!user) return; // Need user context
+
     if (completedCrop?.width && completedCrop?.height && imgRef.current) {
       try {
         const croppedImageUrl = await getCroppedImg(
@@ -292,12 +340,22 @@ const ProfilePage = () => {
         const profileToSave = {
            ...currentValues,
            profileImage: croppedImageUrl,
+           id: user.uid,
            // --- TEMPORARY FOR TESTING BLUE TICK ---
            // isVerified: currentProfile.isVerified || currentValues.isVerified || false
            isVerified: true // Keep forced true for testing
            // --- END TEMPORARY ---
         };
         localStorage.setItem('userProfile', JSON.stringify(profileToSave));
+
+         // Optionally update Firebase Auth photoURL immediately after crop
+         try {
+           await updateProfile(user, { photoURL: croppedImageUrl });
+           console.log("Firebase Auth photoURL updated after crop.");
+         } catch (authError) {
+           console.error("Failed to update Firebase Auth photoURL after crop:", authError);
+         }
+
 
         setIsCropDialogOpen(false);
         setNewProfileImageSrc(null); // Clear the source image
@@ -334,7 +392,7 @@ const ProfilePage = () => {
       // Clear local storage (optional, but often good practice on logout)
       localStorage.removeItem('userProfile');
       // Redirect to home page or login page
-      router.push('/');
+      router.push('/login'); // Redirect to login after logout
     } catch (error) {
       console.error("Error logging out:", error);
       toast({
@@ -346,6 +404,26 @@ const ProfilePage = () => {
   };
 
   const currentValues = form.watch(); // Use watch to reactively get values for display
+
+  if (authLoading) {
+     return (
+       <div className="container mx-auto p-6 flex justify-center items-center min-h-[calc(100vh-8rem)]">
+         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+         <span className="ml-2">Loading profile...</span>
+       </div>
+     );
+   }
+
+   // If user is not logged in (and not loading), show redirecting message or null
+   if (!user) {
+      return (
+        <div className="container mx-auto p-6 flex justify-center items-center min-h-[calc(100vh-8rem)]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="ml-2">Redirecting to login...</span>
+        </div>
+     );
+   }
+
 
   return (
     <div className="container mx-auto p-6">
@@ -393,10 +471,11 @@ const ProfilePage = () => {
                         <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input type="email" placeholder="your.email@gmail.com" {...field} />
+                            {/* Make email read-only as it's used for login */}
+                            <Input type="email" placeholder="your.email@gmail.com" {...field} readOnly disabled className="bg-muted/50 cursor-not-allowed"/>
                           </FormControl>
                            <FormDescription>
-                             Must be a @gmail.com address.
+                             Email cannot be changed.
                            </FormDescription>
                           <FormMessage />
                         </FormItem>

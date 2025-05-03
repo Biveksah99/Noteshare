@@ -14,7 +14,7 @@ import {useState, useEffect} from "react"
 import {useForm} from "react-hook-form"
 import * as z from "zod"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
-import { File as FileIcon, UploadCloud } from "lucide-react";
+import { File as FileIcon, UploadCloud, Loader2 } from "lucide-react"; // Added Loader2
 import { auth } from '@/lib/firebase'; // Import auth
 import { useAuthState } from 'react-firebase-hooks/auth'; // Import useAuthState
 
@@ -55,6 +55,14 @@ const UploadPage = () => {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]); // State to hold actual File objects for display/upload logic
   const [user, authLoading] = useAuthState(auth); // Get current user state
 
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/login');
+    }
+  }, [user, authLoading, router]);
+
+
   useEffect(() => {
     // Load categories from local storage on component mount
     const storedCategories = localStorage.getItem('categories');
@@ -88,19 +96,19 @@ const UploadPage = () => {
   }, []);
 
   const form = useForm<FormValues>({
-    resolver: async (data, context, options) => {
+     resolver: async (data, context, options) => {
       console.log("Validating raw data:", data);
 
       // Ensure 'files' is an array and contains only objects that *look like* Files
       // Zod needs plain objects for validation, not actual File instances sometimes
        const plainFileObjects = Array.isArray(data.files)
          ? data.files
-             .filter(f => typeof f === 'object' && f !== null && 'name' in f && 'size' in f && 'type' in f)
+             // Make sure it's a File instance before converting
+             .filter(f => f instanceof File)
              .map(file => ({ // Convert File instances to plain objects for Zod
                name: file.name,
                size: file.size,
                type: file.type,
-               // Copy other relevant properties if your schema expects them
              }))
          : [];
 
@@ -115,13 +123,13 @@ const UploadPage = () => {
       const result = formSchema.safeParse(dataToValidate);
       if (!result.success) {
         console.error("Validation failed:", result.error.flatten().fieldErrors);
-        // Log the raw error object for more details
+        // Log the raw error object for more details if flatten doesn't work as expected
         console.error("Raw Zod error:", result.error);
-        return { values: data, errors: result.error.flatten().fieldErrors }; // Return original data with errors
+         // Return original data with File objects and the errors
+        return { values: data, errors: result.error.flatten().fieldErrors };
       }
-      console.log("Validation successful:", result.data);
-      // Important: Return the *original* data (with File instances) if validation passes,
-      // otherwise onSubmit will receive plain objects instead of File objects.
+       console.log("Validation successful:", result.data);
+      // Important: Return the *original* data (with File instances) if validation passes
       return { values: data, errors: {} };
     },
     defaultValues: {
@@ -154,10 +162,14 @@ const UploadPage = () => {
     if (userProfileRaw) {
       try {
         const userProfile = JSON.parse(userProfileRaw);
-        if (userProfile.email === user.email) {
+        // Verify the profile belongs to the current user
+        if (userProfile.id === user.uid || userProfile.email === user.email) {
              uploaderName = userProfile.fullName || uploaderName;
              uploaderProfileImage = userProfile.profileImage || uploaderProfileImage;
              uploaderIsVerified = userProfile.isVerified || false;
+        } else {
+           console.warn("localStorage profile does not match current user. Using auth defaults.");
+           // Optionally, clear the mismatched profile: localStorage.removeItem('userProfile');
         }
       } catch (error) {
         console.error("Failed to parse user profile from localStorage for uploader info", error);
@@ -222,7 +234,7 @@ const UploadPage = () => {
       title: values.title,
       description: values.description,
       uploader: uploaderName,
-      uploaderId: user.uid,
+      uploaderId: user.uid, // Use Firebase UID
       uploaderProfileImage: uploaderProfileImage,
       uploaderIsVerified: uploaderIsVerified,
       timestamp: new Date().toISOString(),
@@ -289,12 +301,17 @@ const UploadPage = () => {
     // Get current files from the form state (these should be File objects)
     const currentFiles = form.getValues("files") || [];
     // Ensure currentFiles is an array of File objects
-    const validCurrentFiles = Array.isArray(currentFiles) ? currentFiles.filter(f => f instanceof File) : [];
+     const validCurrentFiles = Array.isArray(currentFiles) ? currentFiles.filter(f => f instanceof File) : [];
 
     // Combine and ensure no duplicates based on name and size (simple check)
     const combinedFilesMap = new Map<string, File>();
     [...validCurrentFiles, ...files].forEach(file => {
-        combinedFilesMap.set(`${file.name}-${file.size}`, file);
+        // Ensure we are dealing with a File object
+        if (file instanceof File) {
+           combinedFilesMap.set(`${file.name}-${file.size}`, file);
+        } else {
+            console.warn("Attempted to add a non-File object:", file);
+        }
     });
     const combinedFiles = Array.from(combinedFilesMap.values());
 
@@ -315,13 +332,32 @@ const UploadPage = () => {
   const removeFile = (indexToRemove: number) => {
     // Get current File objects from the form state
     const currentFiles = form.getValues("files") || [];
-    const validCurrentFiles = Array.isArray(currentFiles) ? currentFiles.filter(f => f instanceof File) : [];
+     const validCurrentFiles = Array.isArray(currentFiles) ? currentFiles.filter(f => f instanceof File) : [];
 
     const updatedFiles = validCurrentFiles.filter((_, index) => index !== indexToRemove);
     console.log("Files after removal:", updatedFiles);
     setUploadedFiles(updatedFiles); // Update display state
     form.setValue("files", updatedFiles, { shouldValidate: true }); // Update form state
   };
+
+   if (authLoading) {
+     return (
+       <div className="container mx-auto p-6 flex justify-center items-center min-h-[calc(100vh-8rem)]">
+         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+         <span className="ml-2">Loading...</span>
+       </div>
+     );
+   }
+
+   // If user is not logged in (and not loading), show redirecting message or null
+   if (!user) {
+      return (
+        <div className="container mx-auto p-6 flex justify-center items-center min-h-[calc(100vh-8rem)]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="ml-2">Redirecting to login...</span>
+        </div>
+     );
+   }
 
 
   return (

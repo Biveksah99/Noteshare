@@ -12,6 +12,9 @@ import { VerifiedBadge } from '@/components/ui/verified-badge';
 import { format } from 'date-fns';
 import Link from "next/link";
 import NepaliDate from 'nepali-date-converter'; // Import the correct Nepali date converter
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '@/lib/firebase';
+import { Loader2 } from 'lucide-react'; // Import Loader2
 
 // Updated announcements
 const announcements = [
@@ -54,79 +57,91 @@ const Home = () => {
   const router = useRouter();
   const [recentUploads, setRecentUploads] = useState<Note[]>([]);
   const [nepaliDate, setNepaliDate] = useState('');
+  const [user, authLoading] = useAuthState(auth); // Use auth state
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/login'); // Use replace to avoid login page in history
+    }
+  }, [user, authLoading, router]);
 
 
   useEffect(() => {
-    // Load recent uploads from local storage
-    const allKeys = Object.keys(localStorage);
-    const uploads: Note[] = [];
+    // Only load data if the user is authenticated
+    if (user) {
+      // Load recent uploads from local storage
+      const allKeys = Object.keys(localStorage);
+      const uploads: Note[] = [];
 
-    allKeys.forEach(key => {
-      // Skip non-category keys and other specific keys
-      if (['userProfile', 'adminUserProfile', 'categories'].includes(key) || key.startsWith('firebase:') || key === 'genkit:telemetryId') {
-         return;
-      }
-
-      try {
-        const item = localStorage.getItem(key);
-        // Gracefully handle non-JSON items or parsing errors
-        if (item && typeof item === 'string' && item.trim() !== '') {
-          try {
-            const parsedItem = JSON.parse(item);
-            // Ensure it's an array of notes
-            if (Array.isArray(parsedItem)) {
-               parsedItem.forEach((note: any) => {
-                 // Basic validation for note structure
-                 if(note && typeof note === 'object' && note.id && note.title && note.timestamp && note.files && note.uploaderId) { // Ensure uploaderId exists
-                    // Add category if missing
-                    if (!note.category) {
-                       note.category = key;
-                    }
-                     // Add uploaderProfileImage and uploaderIsVerified if missing
-                     if (note.uploaderIsVerified === undefined) {
-                       // --- TEMPORARY FOR TESTING BLUE TICK ---
-                       note.uploaderIsVerified = true; // Keep forced true for testing
-                       // --- END TEMPORARY ---
-                     }
-                     if (note.uploaderProfileImage === undefined) {
-                         note.uploaderProfileImage = null; // Default to null
-                     }
-                    uploads.push(note as Note); // Add validated note
-                 } else {
-                   // console.warn(`Skipping invalid note structure or missing uploaderId in category ${key}:`, note);
-                 }
-               });
-            } else {
-                // console.warn(`Item with key ${key} is not an array, skipping.`);
-            }
-          } catch (e) {
-            // Only log syntax errors, ignore others that might be expected
-             if (e instanceof SyntaxError) {
-                // console.warn(`Item with key ${key} is not valid JSON, skipping.`);
-             } else {
-               // console.error(`Failed to process item from localStorage for key ${key}.`, e);
-             }
-          }
-        } else {
-          // console.warn(`Item with key ${key} is not a string or is null/empty, skipping.`);
+      allKeys.forEach(key => {
+        // Skip non-category keys and other specific keys
+        // Example: Exclude 'userProfile', 'adminUserProfile', etc.
+        if (['userProfile', 'adminUserProfile', 'categories', 'loglevel', 'debug'].includes(key) || key.startsWith('firebase:') || key === 'genkit:telemetryId') {
+           return;
         }
-      } catch (e) {
-        console.error("Failed to retrieve or process item from localStorage", e);
-      }
-    });
 
-    // Sort uploads by timestamp (newest first)
-    uploads.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    setRecentUploads(uploads.slice(0, 6)); // Display the 6 most recent uploads
+        try {
+          const item = localStorage.getItem(key);
+          // Gracefully handle non-JSON items or parsing errors
+          if (item && typeof item === 'string' && item.trim() !== '') { // Check if item is a non-empty string
+            try {
+              const parsedItem = JSON.parse(item);
+              // Ensure it's an array of notes
+              if (Array.isArray(parsedItem)) {
+                 parsedItem.forEach((note: any) => {
+                   // Basic validation for note structure
+                   if(note && typeof note === 'object' && note.id && note.title && note.timestamp && note.files && note.uploaderId) { // Ensure uploaderId exists
+                      // Add category if missing
+                      if (!note.category) {
+                         note.category = key;
+                      }
+                       // Add uploaderProfileImage and uploaderIsVerified if missing
+                       if (note.uploaderIsVerified === undefined) {
+                         // --- TEMPORARY FOR TESTING BLUE TICK ---
+                         note.uploaderIsVerified = true; // Keep forced true for testing
+                         // --- END TEMPORARY ---
+                       }
+                       if (note.uploaderProfileImage === undefined) {
+                           note.uploaderProfileImage = null; // Default to null
+                       }
+                      uploads.push(note as Note); // Add validated note
+                   } else {
+                      console.warn(`Skipping invalid note structure or missing uploaderId in category ${key}:`, note);
+                   }
+                 });
+              } else {
+                  console.warn(`Item with key ${key} is not an array, skipping.`);
+              }
+            } catch (e) {
+              // Only log syntax errors, ignore others that might be expected
+               if (e instanceof SyntaxError) {
+                  console.warn(`Item with key ${key} is not valid JSON, skipping.`);
+               } else {
+                 console.error(`Failed to process item from localStorage for key ${key}.`, e);
+               }
+            }
+          } else {
+            // console.warn(`Item with key ${key} is not a string or is null/empty, skipping.`);
+          }
+        } catch (e) {
+          console.error("Failed to retrieve or process item from localStorage", e);
+        }
+      });
 
-  }, []);
+      // Sort uploads by timestamp (newest first)
+      uploads.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setRecentUploads(uploads.slice(0, 6)); // Display the 6 most recent uploads
+    }
+
+  }, [user]); // Re-run when user state changes
 
 
   useEffect(() => {
     // Function to get Nepali date using the nepali-date-converter library
     const getFormattedNepaliDate = () => {
         try {
-            const dateInBS = new NepaliDate(); // Use current date by default
+            const dateInBS = new NepaliDate(new Date()); // Use current date
             // Format the date: YYYY-MM-DD BS, or choose another format like .format('ddd, DD MMMM YYYY')
             return dateInBS.format('YYYY-MM-DD') + ' BS';
         } catch (e) {
@@ -147,6 +162,27 @@ const Home = () => {
   const handleUploadClick = () => {
     router.push('/upload'); // Navigate to the /upload route
   };
+
+  if (authLoading) {
+     return (
+       <div className="container mx-auto p-6 flex justify-center items-center min-h-[calc(100vh-8rem)]">
+         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+         <span className="ml-2">Loading...</span>
+       </div>
+     );
+  }
+
+  // If user is not logged in (and not loading), don't render the main content
+   if (!user) {
+     // Optionally show a minimal loading/redirecting state or just null
+     return (
+        <div className="container mx-auto p-6 flex justify-center items-center min-h-[calc(100vh-8rem)]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="ml-2">Redirecting to login...</span>
+        </div>
+     );
+   }
+
 
   return (
     <div className="container mx-auto p-4 md:p-6"> {/* Adjusted padding */}
@@ -196,7 +232,8 @@ const Home = () => {
                     <Card className="neumorphic h-full transition-shadow duration-200 group-hover:shadow-lg overflow-hidden"> {/* Added overflow hidden */}
                       <CardHeader className="flex flex-row items-start space-x-3 p-4"> {/* Use items-start */}
                         {/* Avatar part, not wrapped in Link to avoid nesting */}
-                        <div className="flex flex-shrink-0 mt-1 group/uploader">
+                         <div className="flex flex-shrink-0 mt-1 group/uploader">
+                            {/* Link Avatar to sender's profile */}
                            <Link href={`/profile/${upload.uploaderId}`} onClick={(e) => e.stopPropagation()} className="block">
                                <Avatar className="h-10 w-10 group-hover/uploader:opacity-80 transition-opacity">
                                  <AvatarImage

@@ -9,6 +9,8 @@ import { format } from 'date-fns';
 import Link from "next/link";
 import { File, Image as ImageIcon, Loader2 } from "lucide-react"; // Added Loader2
 import { VerifiedBadge } from '@/components/ui/verified-badge'; // Import the new badge
+import { useAuthState } from 'react-firebase-hooks/auth'; // Import auth state hook
+import { auth } from '@/lib/firebase'; // Import auth instance
 
 // Interface for Note structure including uploader verification and profile image
 interface Note {
@@ -30,10 +32,12 @@ const DESCRIPTION_PREVIEW_LIMIT = 100; // Limit for description preview
 function CategoryDetailContent() {
   const params = useParams(); // Use useParams hook
   const router = useRouter();
+  const [user, authLoading] = useAuthState(auth); // Get auth state
 
 
-  // Directly access params.category, no need for Promise.resolve + React.use here
-  const categoryParam = params?.category;
+   // Use React.use to unwrap the promise/value from params
+   // This requires the component or its parent to be wrapped in <Suspense>
+   const categoryParam = params ? params.category : null;
 
 
    const category = useMemo(() => {
@@ -53,9 +57,18 @@ function CategoryDetailContent() {
   const [notes, setNotes] = useState<Note[]>([]); // Use Note interface
   const [isLoading, setIsLoading] = useState(true); // Loading state
 
+   // Redirect to login if not authenticated
   useEffect(() => {
-    setIsLoading(true); // Start loading
-    if (category) {
+    if (!authLoading && !user) {
+      router.replace('/login');
+    }
+  }, [user, authLoading, router]);
+
+
+  useEffect(() => {
+    // Only fetch notes if user is authenticated and category is valid
+    if (user && category) {
+      setIsLoading(true); // Start loading
       const storedNotesRaw = localStorage.getItem(category);
       let foundNotes: Note[] = [];
       if (storedNotesRaw) {
@@ -77,11 +90,20 @@ function CategoryDetailContent() {
        // Sort notes by timestamp (newest first)
       foundNotes.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setNotes(foundNotes);
-    } else {
-        setNotes([]); // Clear notes if category is invalid
+      setIsLoading(false); // Finish loading
+    } else if (user && !category) {
+      // Handle case where user is logged in but category is missing/invalid
+      setNotes([]);
+      setIsLoading(false);
+      console.warn("Category parameter is missing or invalid.");
+      // Optionally redirect or show a message
+      // router.push('/categories');
+    } else if (!user && !authLoading) {
+        // User is not logged in, clear notes and stop loading (redirect handled above)
+        setNotes([]);
+        setIsLoading(false);
     }
-    setIsLoading(false); // Finish loading
-  }, [category]);
+  }, [category, user, authLoading]); // Add user and authLoading as dependencies
 
   const renderFilePreview = (files: Array<{ url: string; type: string; name?: string }>) => {
     if (!files || files.length === 0) {
@@ -116,13 +138,23 @@ function CategoryDetailContent() {
     }
   };
 
-   if (isLoading) {
+   if (authLoading || isLoading) { // Show loader if either auth or data is loading
       return (
         <div className="flex justify-center items-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           <span className="ml-2">Loading notes...</span>
         </div>
       );
+   }
+
+   // If user is not logged in after loading, show redirecting message
+   if (!user) {
+      return (
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="ml-2">Redirecting to login...</span>
+        </div>
+     );
    }
 
   return (

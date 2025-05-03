@@ -11,6 +11,8 @@ import { VerifiedBadge } from '@/components/ui/verified-badge'; // Import the ne
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import Link from "next/link";
+import { useAuthState } from 'react-firebase-hooks/auth'; // Import auth state hook
+import { auth } from '@/lib/firebase'; // Import auth instance
 
 const DESCRIPTION_CHAR_LIMIT = 150; // Define the character limit for the description preview
 
@@ -38,6 +40,7 @@ interface Note {
 function ViewNoteContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const [user, authLoading] = useAuthState(auth); // Get auth state
 
    // Extract parameters directly from searchParams.get()
    const noteId = searchParams ? searchParams.get('id') : null;
@@ -51,6 +54,14 @@ function ViewNoteContent() {
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(true); // Loading state
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/login');
+    }
+  }, [user, authLoading, router]);
+
 
   // Decode category once, using useMemo
   const category = useMemo(() => {
@@ -66,8 +77,9 @@ function ViewNoteContent() {
   }, [categoryParam]);
 
   useEffect(() => {
-    setIsLoading(true); // Start loading
-    if (category && noteId) {
+    // Only fetch if user is authenticated and params are valid
+    if (user && category && noteId) {
+      setIsLoading(true); // Start loading
       const storedNotesRaw = localStorage.getItem(category);
       if (storedNotesRaw) {
         try {
@@ -102,16 +114,18 @@ function ViewNoteContent() {
          console.warn(`No notes found for category ${category}. Redirecting.`);
          router.push(`/categories`); // Redirect if category storage is empty
       }
-    } else if (noteId && !category) {
-        console.warn(`Missing category in query params for note ID ${noteId}. Redirecting.`);
-        router.push('/'); // Redirect if category is missing
-    } else if (!noteId) {
-        console.warn(`Missing noteId in query params. Redirecting.`);
-        router.push('/'); // Redirect if noteId is missing
+      setIsLoading(false); // Finish loading
+    } else if (user && (!noteId || !category)) {
+        // Handle missing params when user is logged in
+        console.warn(`Missing note ID or category in query params. Redirecting.`);
+        router.push('/'); // Redirect if params are missing
+        setIsLoading(false);
+    } else if (!user && !authLoading) {
+        // User is not logged in, stop loading (redirect handled above)
+        setIsLoading(false);
     }
-    setIsLoading(false); // Finish loading
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category, noteId, fileIndexParam, router]); // Add router back
+  }, [category, noteId, fileIndexParam, router, user, authLoading]); // Add user and authLoading
 
 
   // Wrap URL update logic in useCallback
@@ -120,9 +134,9 @@ function ViewNoteContent() {
     const encodedCategory = typeof category === 'string' ? encodeURIComponent(category) : '';
     // Ensure noteId is a string or handle appropriately
     const currentNoteId = typeof noteId === 'string' ? noteId : '';
-    // Use push/replace for URL updates without full page reload if needed
-    // window.history.replaceState(null, '', `/view-note?id=${currentNoteId}&category=${encodedCategory}&fileIndex=${newIndex}`);
-  }, [router, noteId, category]); // Add dependencies
+     // Use replaceState to update URL without full navigation
+    window.history.replaceState(null, '', `/view-note?id=${currentNoteId}&category=${encodedCategory}&fileIndex=${newIndex}`);
+  }, [noteId, category]); // Add dependencies
 
   const handlePrevClick = () => {
     if (!note || !note.files || note.files.length <= 1) return; // Guard clause
@@ -162,7 +176,7 @@ function ViewNoteContent() {
   };
 
   // Loading state display
-   if (isLoading || !note) { // Check isLoading and if note is still null
+   if (authLoading || isLoading) { // Check isLoading and if note is still null
        return (
          <div className="flex justify-center items-center h-screen">
            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -171,11 +185,33 @@ function ViewNoteContent() {
        );
    }
 
+   // If user is not logged in after loading, show redirecting message
+   if (!user) {
+      return (
+        <div className="flex justify-center items-center h-screen">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="ml-2">Redirecting to login...</span>
+        </div>
+     );
+   }
+
+   // If note failed to load after user is confirmed
+   if (!note) {
+       return (
+         <div className="flex justify-center items-center h-screen">
+            <p className="text-destructive">Failed to load note details.</p>
+            {/* Optionally add a button to go back */}
+            <Button onClick={() => router.back()} variant="outline" className="ml-4">Go Back</Button>
+         </div>
+       );
+   }
+
+
   const currentFile = note.files && note.files.length > currentFileIndex ? note.files[currentFileIndex] : null;
   // Handle cases where file might be null before accessing properties
   const baseFileName = currentFile?.name || (note.title ? note.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() : `note_${note.id}`);
   // Check if currentFile is not null before accessing its type
-  const fileExtension = currentFile ? getFileExtension(currentFile.type) : 'bin';
+   const fileExtension = currentFile ? getFileExtension(currentFile.type || '') : 'bin'; // Added fallback for type
   const fileName = `${baseFileName}.${fileExtension}`;
 
 
@@ -197,7 +233,7 @@ function ViewNoteContent() {
           >
             <Avatar className="mr-2 h-10 w-10 group-hover:opacity-80 transition-opacity">
               <AvatarImage
-                src={note.uploaderProfileImage || `https://picsum.photos/seed/${note.uploader}/40/40`}
+                src={note.uploaderProfileImage || `https://picsum.photos/seed/${note.uploaderId}/40/40`} // Use uploaderId
                 alt={note.uploader || 'Uploader'}
                 data-ai-hint="user avatar"
               />
@@ -227,7 +263,7 @@ function ViewNoteContent() {
           <div className="mb-6">
             <h3 className="text-lg font-semibold mb-2">Description</h3>
             {/* Added font styles for description */}
-            <p className="whitespace-pre-wrap font-serif text-base font-bold text-foreground/80">
+             <p className="whitespace-pre-wrap font-serif text-base font-bold text-foreground/80">
               {displayDescription}
             </p>
             {isLongDescription && (

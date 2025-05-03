@@ -7,12 +7,15 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { VerifiedBadge } from '@/components/ui/verified-badge';
 import { User as UserIcon, Loader2 } from "lucide-react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation" // Import useRouter
 import { useEffect, useState } from "react"
 import { toast } from "@/hooks/use-toast";
+import { useAuthState } from 'react-firebase-hooks/auth'; // Import auth state hook
+import { auth } from '@/lib/firebase'; // Import auth instance
 
 // Define interface for user profile data (similar to profile/page.tsx)
 interface UserProfileData {
+  id?: string; // Add ID to interface
   fullName?: string;
   email?: string;
   gender?: string;
@@ -40,50 +43,45 @@ const UserProfilePage = () => {
   const userId = params?.userId as string | undefined; // Get userId from route params
   const [profileData, setProfileData] = useState<UserProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUser, authLoading] = useAuthState(auth); // Get current user state
+  const router = useRouter(); // Initialize router
+
+   // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !currentUser) {
+      router.replace('/login');
+    }
+  }, [currentUser, authLoading, router]);
+
 
   useEffect(() => {
-    setIsLoading(true);
-    if (userId) {
-      // Fetch user profile data based on userId
-      // In a real app, this would fetch from Firestore:
-      // const userDocRef = doc(db, 'users', userId);
-      // getDoc(userDocRef).then(...)
-
+     // Only fetch if current user is loaded and userId param exists
+    if (!authLoading && currentUser && userId) {
+      setIsLoading(true);
       // --- Simulate fetching from localStorage ---
-      // This is a simplification. In a real multi-user app, you wouldn't store all profiles in localStorage.
-      // We'll try to find a profile matching the userId (which might be an email or a generated ID in the demo).
-      const allKeys = Object.keys(localStorage);
+      // Find the profile matching userId
+      const mainProfileRaw = localStorage.getItem('userProfile');
       let foundProfile: UserProfileData | null = null;
 
-      // Try finding by 'userProfile' key if the ID matches email or generated ID
-      const mainProfileRaw = localStorage.getItem('userProfile');
       if (mainProfileRaw) {
         try {
           const mainProfile = JSON.parse(mainProfileRaw);
-          // Check if the stored profile's email or generated ID matches the userId param
-          if (mainProfile.email === userId || (mainProfile.id && mainProfile.id === userId)) {
+          // Check if the ID in localStorage matches the requested userId
+          // Note: This assumes the ID stored in localStorage is the Firebase UID
+          if (mainProfile.id === userId) {
             foundProfile = mainProfile;
           }
         } catch (e) { console.error("Error parsing main profile", e); }
       }
 
-       // If not found in main profile, check 'adminUserProfile' (assuming admin might be viewed)
+      // Fallback: Check notes for uploader data if profile not in 'userProfile'
+      // (This part might be less reliable depending on how data is stored)
        if (!foundProfile) {
-           const adminProfileRaw = localStorage.getItem('adminUserProfile');
-           if (adminProfileRaw) {
-               try {
-                 const adminProfile = JSON.parse(adminProfileRaw);
-                  if (adminProfile.email === userId || (adminProfile.id && adminProfile.id === userId) || userId === "adminUserId") { // Example admin ID check
-                      foundProfile = adminProfile;
-                  }
-               } catch (e) { console.error("Error parsing admin profile", e); }
-           }
-       }
-
-      // If still not found, iterate through potential category storage (less likely but for robustness)
-       if (!foundProfile) {
+           const allKeys = Object.keys(localStorage);
            allKeys.forEach(key => {
-               if (key === 'userProfile' || key === 'adminUserProfile' || key === 'categories' || key.startsWith('firebase:')) {
+                if (foundProfile) return; // Stop searching if already found
+                // Skip non-category keys
+               if (['userProfile', 'adminUserProfile', 'categories', 'loglevel', 'debug'].includes(key) || key.startsWith('firebase:') || key === 'genkit:telemetryId') {
                    return;
                }
                const item = localStorage.getItem(key);
@@ -94,13 +92,13 @@ const UserProfilePage = () => {
                            const noteWithUser = notesInCategory.find(note => note.uploaderId === userId);
                            if (noteWithUser) {
                                foundProfile = {
+                                   id: noteWithUser.uploaderId, // Set ID from uploaderId
                                    fullName: noteWithUser.uploader,
                                    profileImage: noteWithUser.uploaderProfileImage,
                                    isVerified: noteWithUser.uploaderIsVerified,
-                                   // Other details might be missing
+                                   // Other details are likely missing here
                                };
-                               // Stop searching once found
-                               return;
+                               // Ensure email is added if available (maybe from auth? complex)
                            }
                        }
                    } catch (e) { /* Ignore parsing errors for non-profile keys */ }
@@ -111,7 +109,7 @@ const UserProfilePage = () => {
 
       if (foundProfile) {
         // --- TEMPORARY FOR TESTING BLUE TICK ---
-        // foundProfile.isVerified = true; // Force verified for testing
+        // foundProfile.isVerified = true; // Force verified for testing (or based on your logic)
         // --- REMOVE THIS LINE AFTER TESTING ---
         setProfileData(foundProfile);
       } else {
@@ -123,19 +121,24 @@ const UserProfilePage = () => {
         // Optionally redirect back or show a 'not found' message
         // router.push('/');
       }
+      setIsLoading(false);
       // --- End localStorage Simulation ---
 
-    } else {
-       toast({
+    } else if (!authLoading && !currentUser) {
+       // Stop loading if user is not authenticated (redirect handled above)
+       setIsLoading(false);
+    } else if (!userId) {
+        toast({
          variant: "destructive",
          title: "Error",
          description: "User ID is missing.",
        });
+        setIsLoading(false);
     }
-    setIsLoading(false);
-  }, [userId]);
+  }, [userId, currentUser, authLoading, toast]); // Add currentUser and authLoading
 
-  if (isLoading) {
+
+   if (authLoading || isLoading) { // Check auth loading or data loading
     return (
       <div className="container mx-auto p-6 flex justify-center items-center h-[calc(100vh-10rem)]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -144,10 +147,22 @@ const UserProfilePage = () => {
     );
   }
 
+   // If user is not logged in after loading
+   if (!currentUser) {
+      return (
+        <div className="container mx-auto p-6 flex justify-center items-center h-[calc(100vh-10rem)]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="ml-2">Redirecting to login...</span>
+        </div>
+     );
+   }
+
+
   if (!profileData) {
     return (
       <div className="container mx-auto p-6 text-center">
         <p className="text-destructive">User profile could not be loaded.</p>
+         <Button onClick={() => router.back()} variant="outline" className="mt-4">Go Back</Button>
       </div>
     );
   }
@@ -175,6 +190,8 @@ const UserProfilePage = () => {
              {isVerified && <VerifiedBadge className="ml-1.5 h-5 w-5 flex-shrink-0" />} {/* Slightly larger badge */}
           </h1>
           {/* No Edit button on other users' profiles */}
+          {/* Optionally add a 'Back' button */}
+          <Button variant="outline" size="sm" onClick={() => router.back()}>Back</Button>
        </div>
 
       {/* Center the profile image and details vertically */}
@@ -195,13 +212,13 @@ const UserProfilePage = () => {
           <ProfileDetail label="Full Name">
              <span className="text-sm text-muted-foreground flex items-center">
                  <span>{fullName || 'N/A'}</span>
-                  {/* Adjusted badge size and margin */}
+                  {/* Adjusted badge size and margin - Use h-4 w-4 */}
                   {isVerified && <VerifiedBadge className="ml-1 h-4 w-4 flex-shrink-0" />}
              </span>
           </ProfileDetail>
           <ProfileDetail label="Email" value={email || 'N/A'} />
           <ProfileDetail label="Gender" value={gender || 'N/A'} />
-          {/* Optionally hide contact number for privacy */}
+          {/* Optionally hide contact number for privacy on public view */}
           {/* <ProfileDetail label="Phone" value={contactNumber || 'N/A'} /> */}
           <ProfileDetail label="Address" value={address || 'N/A'} />
           <Separator className="my-2"/>
