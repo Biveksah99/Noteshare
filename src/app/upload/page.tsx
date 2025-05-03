@@ -1,3 +1,4 @@
+
 "use client"
 
 import {Button} from "@/components/ui/button"
@@ -13,13 +14,14 @@ import {useState, useEffect} from "react"
 import {useForm} from "react-hook-form"
 import * as z from "zod"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
-import { File } from "lucide-react";
+import { File as FileIcon } from "lucide-react"; // Renamed to avoid conflict with File type
 import { auth } from '@/lib/firebase'; // Import auth
 import { useAuthState } from 'react-firebase-hooks/auth'; // Import useAuthState
 
+// Updated schema: Use z.any() and refine for file-like objects
 const formSchema = z.object({
   category: z.string().min(1, {
-    message: "Category must be selected.", // Changed validation message
+    message: "Category must be selected.",
   }),
   title: z.string()
     .min(2, {
@@ -31,7 +33,13 @@ const formSchema = z.object({
   description: z.string().min(10, {
     message: "Description must be at least 10 characters.",
   }),
-  files: z.array(z.instanceof(File)).min(1, {message: "Please upload at least one file."}) // Use z.instanceof(File)
+  // Use z.any() and refine the check for file-like properties
+  files: z.array(z.any())
+    .min(1, { message: "Please upload at least one file." })
+    .refine(
+      (files) => files.every((file) => typeof file === 'object' && file !== null && 'name' in file && 'size' in file && 'type' in file),
+      { message: "Invalid file type detected." }
+    )
 })
 
 type FormValues = z.infer<typeof formSchema>;
@@ -53,17 +61,10 @@ const UploadPage = () => {
             setCategories(parsedCategories);
         } else {
             console.error("Stored categories is not an array:", parsedCategories);
-            // Optionally set default categories if parsing fails or format is incorrect
-            // setCategories(['Default Category']);
         }
       } catch (error) {
         console.error("Failed to parse categories from localStorage:", error);
-         // Optionally set default categories on error
-         // setCategories(['Default Category']);
       }
-    } else {
-       // Optionally set default categories if none are stored
-       // setCategories(['Default Category']);
     }
   }, []);
 
@@ -122,7 +123,10 @@ const UploadPage = () => {
 
 
     const fileData = [];
-    for (const file of values.files) {
+    // Ensure values.files is treated as an array of File objects
+    const filesToProcess: File[] = values.files as File[];
+
+    for (const file of filesToProcess) {
       try {
           const fileDataUrl = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
@@ -207,7 +211,8 @@ const UploadPage = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const currentFiles = form.getValues("files") || [];
-    const newFiles = [...currentFiles, ...files];
+    // Combine and cast to File[] for state
+    const newFiles = [...currentFiles, ...files] as File[];
     setUploadedFiles(newFiles); // Update state with the combined list
     form.setValue("files", newFiles, { shouldValidate: true }); // Update form's files array and trigger validation
   };
@@ -216,7 +221,7 @@ const UploadPage = () => {
   const removeFile = (indexToRemove: number) => {
     const currentFiles = form.getValues("files") || [];
     const updatedFiles = currentFiles.filter((_, index) => index !== indexToRemove);
-    setUploadedFiles(updatedFiles); // Update state
+    setUploadedFiles(updatedFiles as File[]); // Update state
     form.setValue("files", updatedFiles, { shouldValidate: true }); // Update form and trigger validation
   };
 
@@ -316,7 +321,7 @@ const UploadPage = () => {
                     </FormControl>
                      {/* Custom Button to trigger file input */}
                      <Button type="button" variant="outline" onClick={() => document.getElementById('file-upload-input')?.click()}>
-                       <File className="mr-2 h-4 w-4" /> Add Files
+                       <FileIcon className="mr-2 h-4 w-4" /> Add Files
                      </Button>
                     <FormDescription>
                       Supported files: PDF, Word, PPT, Images. You can add multiple files.
@@ -331,7 +336,7 @@ const UploadPage = () => {
                           {uploadedFiles.map((file, index) => (
                             <li key={index} className="flex items-center justify-between">
                               <span className="truncate mr-2">
-                                <File className="h-4 w-4 inline mr-1" />
+                                <FileIcon className="h-4 w-4 inline mr-1" />
                                 {file.name} ({ (file.size / 1024).toFixed(1) } KB)
                               </span>
                               <Button
@@ -366,3 +371,4 @@ const UploadPage = () => {
 }
 
 export default UploadPage
+
