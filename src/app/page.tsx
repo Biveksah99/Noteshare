@@ -11,7 +11,7 @@ import { Calendar, Globe, Upload as UploadIcon } from "lucide-react"; // Correct
 import { VerifiedBadge } from '@/components/ui/verified-badge';
 import { format } from 'date-fns';
 import Link from "next/link";
-import NepaliDate from 'nepali-date-converter'; // Import the Nepali date converter
+import NepaliDate from 'nepali-date-converter'; // Import the correct Nepali date converter
 
 // Updated announcements
 const announcements = [
@@ -63,7 +63,7 @@ const Home = () => {
 
     allKeys.forEach(key => {
       // Skip non-category keys and other specific keys
-      if (['userProfile', 'adminUserProfile', 'categories'].includes(key) || key.startsWith('firebase:')) {
+      if (['userProfile', 'adminUserProfile', 'categories'].includes(key) || key.startsWith('firebase:') || key === 'genkit:telemetryId') {
          return;
       }
 
@@ -93,18 +93,18 @@ const Home = () => {
                      }
                     uploads.push(note as Note); // Add validated note
                  } else {
-                   console.warn(`Skipping invalid note structure or missing uploaderId in category ${key}:`, note);
+                   // console.warn(`Skipping invalid note structure or missing uploaderId in category ${key}:`, note);
                  }
                });
             } else {
-                console.warn(`Item with key ${key} is not an array, skipping.`);
+                // console.warn(`Item with key ${key} is not an array, skipping.`);
             }
           } catch (e) {
             // Only log syntax errors, ignore others that might be expected
              if (e instanceof SyntaxError) {
                 // console.warn(`Item with key ${key} is not valid JSON, skipping.`);
              } else {
-               console.error(`Failed to process item from localStorage for key ${key}.`, e);
+               // console.error(`Failed to process item from localStorage for key ${key}.`, e);
              }
           }
         } else {
@@ -132,12 +132,7 @@ const Home = () => {
         } catch (e) {
             console.error("Error converting date to Nepali date:", e);
             // Fallback to Gregorian date if conversion fails
-            return new Date().toLocaleDateString(undefined, {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                weekday: 'long'
-            });
+            return format(new Date(), 'PPP'); // e.g., May 3, 2025
         }
     };
     setNepaliDate(getFormattedNepaliDate());
@@ -195,22 +190,20 @@ const Home = () => {
                   <Link key={upload.id} href={`/view-note?id=${upload.id}&category=${encodeURIComponent(upload.category)}`} className="block group">
                     <Card className="neumorphic h-full transition-shadow duration-200 group-hover:shadow-lg overflow-hidden"> {/* Added overflow hidden */}
                       <CardHeader className="flex flex-row items-start space-x-3 p-4"> {/* Use items-start */}
-                        {/* Link wrapping Avatar only, prevents card link navigation on avatar click */}
-                        <Link
-                          href={`/profile/${upload.uploaderId}`}
-                          onClick={(e) => e.stopPropagation()} // Prevent card link click
-                          className="flex flex-shrink-0 mt-1 group/uploader"
-                        >
-                           <Avatar className="h-10 w-10 group-hover/uploader:opacity-80 transition-opacity">
-                             <AvatarImage
-                                 src={upload.uploaderProfileImage || `https://picsum.photos/seed/${upload.uploader}/40/40`}
-                                 alt={upload.uploader || 'Uploader'}
-                                 data-ai-hint="user avatar"
-                               />
-                             <AvatarFallback className="group-hover/uploader:bg-muted/80 transition-colors">{upload.uploader ? upload.uploader.substring(0, 2).toUpperCase() : '??'}</AvatarFallback>
-                           </Avatar>
-                        </Link>
-                        {/* Note Title, Uploader Name with Badge, and Timestamp (not linked to profile) */}
+                        {/* Avatar part, not wrapped in Link to avoid nesting */}
+                        <div className="flex flex-shrink-0 mt-1 group/uploader">
+                           <Link href={`/profile/${upload.uploaderId}`} onClick={(e) => e.stopPropagation()} className="block">
+                               <Avatar className="h-10 w-10 group-hover/uploader:opacity-80 transition-opacity">
+                                 <AvatarImage
+                                     src={upload.uploaderProfileImage || `https://picsum.photos/seed/${upload.uploader}/40/40`}
+                                     alt={upload.uploader || 'Uploader'}
+                                     data-ai-hint="user avatar"
+                                   />
+                                 <AvatarFallback className="group-hover/uploader:bg-muted/80 transition-colors">{upload.uploader ? upload.uploader.substring(0, 2).toUpperCase() : '??'}</AvatarFallback>
+                               </Avatar>
+                           </Link>
+                        </div>
+                        {/* Note Title, Uploader Name with Badge, and Timestamp */}
                         <div className="flex-1 min-w-0">
                           <CardTitle className="text-lg line-clamp-1">{upload.title}</CardTitle>
                           <CardDescription className="text-xs flex items-center flex-wrap mt-1"> {/* Added margin top */}
@@ -222,7 +215,7 @@ const Home = () => {
                             >
                                <span>{upload.uploader}</span>
                                {/* Adjusted badge size and margin */}
-                               {upload.uploaderIsVerified && <VerifiedBadge className="h-3.5 w-3.5 ml-0.5 flex-shrink-0 inline-block align-middle" />}
+                               {upload.uploaderIsVerified && <VerifiedBadge className="ml-0.5 h-3.5 w-3.5 flex-shrink-0" />}
                             </Link>
                             <span className="mx-1">&middot;</span>
                              {format(new Date(upload.timestamp), 'MMM d, yyyy')}
