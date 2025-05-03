@@ -12,29 +12,21 @@ const VerifiedBadge = React.forwardRef<SVGSVGElement, VerifiedBadgeProps>(
   ({ className, width = 24, height = 24, ...props }, ref) => { // Default size
     return (
       // Add inline-block and vertical-align to the container span if needed outside SVG
-      <span className={cn("verified-badge inline-block", className)}>
+      <span className={cn("verified-badge inline-block align-middle", className)}> {/* Added align-middle */}
         <svg
           ref={ref}
           xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24" // Ensure viewBox is set
+          viewBox="0 0 24 24" // Standard viewBox
           fill="currentColor"
           width={width} // Use props or default size
           height={height}
-          className={cn("text-blue-500", props.className)} // Apply base color, remove badge class here
+          className={cn("text-blue-500", props.className)} // Apply base color
           {...props}
         >
-          {/* Background Starburst Shape */}
-          <path
-            fillRule="evenodd"
-            d="M12.964 2.276a.75.75 0 0 0-1.928 0L8.87 3.88a.75.75 0 0 1-.584.093L4.94 3.002a.75.75 0 0 0-.91.39L2.276 6.036a.75.75 0 0 1-.39.91L.97 8.87a.75.75 0 0 0-.093.584l.97 3.346a.75.75 0 0 0 .093.584l-.97 3.346a.75.75 0 0 0 .093.584l.916 1.928a.75.75 0 0 0 .584.093l3.346-.97a.75.75 0 0 1 .584.093l1.928 1.606a.75.75 0 0 0 .964.093l2.964-1.27a.75.75 0 0 1 .584-.093l3.346.97a.75.75 0 0 0 .91-.39l1.754-2.644a.75.75 0 0 1 .39-.91l.916-1.928a.75.75 0 0 0 .093-.584l-.97-3.346a.75.75 0 0 0-.093-.584l.97-3.346a.75.75 0 0 0-.093-.584L20.998 4.94a.75.75 0 0 0-.584-.093l-3.346.97a.75.75 0 0 1-.584-.093L15.06 3.88a.75.75 0 0 0-.964-.093l-1.132-.48Z"
-            clipRule="evenodd"
-          />
-          {/* Checkmark */}
-          <path
-            fill="#fff" // White checkmark
-            d="M16.704 8.47a.75.75 0 0 1 .106 1.054l-5.25 6.5a.75.75 0 0 1-1.16-.006L7.196 11.53a.75.75 0 1 1 1.112-.994l2.736 3.06 4.604-5.706a.75.75 0 0 1 1.056-.114Z"
-          />
-          {/* Shine element for animation */}
+          {/* Twitter-style badge shape */}
+          <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.66-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.91-.2-3.92.81s-1.26 2.52-.8 3.91c-1.31.67-2.2 1.91-2.2 3.34s.89 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.26 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.67-.88 3.34-2.19c1.39.45 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34zm-11.5 4.88L6.34 12.47c-.19-.19-.19-.51 0-.71.19-.19.51-.19.71 0l3.74 3.73 6.86-6.86c.19-.19.51-.19.71 0 .19.19.19.51 0 .71l-7.21 7.22c-.18.19-.49.2-.7.01z"></path>
+
+          {/* Shine element for animation - Keep using the existing one */}
           <defs>
             <linearGradient id="shineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" style={{ stopColor: 'rgba(255,255,255,0.5)' }} />
@@ -51,6 +43,7 @@ const VerifiedBadge = React.forwardRef<SVGSVGElement, VerifiedBadgeProps>(
               className="verified-badge-shine" // Apply animation class
               rx="50%" // Make shine slightly rounded
               ry="50%"
+              style={{ transform: 'rotate(-15deg)' }} // Optional: Slightly rotate shine for effect
           />
         </svg>
       </span>

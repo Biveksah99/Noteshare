@@ -101,15 +101,15 @@ body {
 /* Verified Badge Shine Animation */
 @keyframes shine {
   0% {
-    transform: translateX(-100%); /* Start off-screen left */
+    transform: translateX(-100%) rotate(-15deg); /* Start off-screen left, slight rotation */
     opacity: 0;
   }
   50% {
-    transform: translateX(0); /* Move across the badge */
-    opacity: 0.5; /* Peak brightness */
+    transform: translateX(0) rotate(-15deg); /* Move across the badge */
+    opacity: 0.4; /* Adjusted peak brightness */
   }
   100% {
-    transform: translateX(100%); /* End off-screen right */
+    transform: translateX(100%) rotate(-15deg); /* End off-screen right */
     opacity: 0;
   }
 }
@@ -124,14 +124,14 @@ body {
 /* Adjust the shine element itself */
 .verified-badge-shine {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%; /* Cover the whole badge width */
-  height: 100%;
+  top: -10%; /* Adjust position slightly based on new badge shape */
+  left: -10%;
+  width: 120%; /* Cover the whole badge width */
+  height: 120%;
   /* Use a simpler, softer gradient */
-  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
-  transform: translateX(-100%); /* Initial position off-screen */
-  animation: shine 2.5s ease-in-out infinite; /* Adjust duration/timing */
+  background: linear-gradient(105deg, rgba(255,255,255,0) 20%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 80%);
+  transform: translateX(-100%) rotate(-15deg); /* Initial position off-screen, match rotation */
+  animation: shine 3s ease-in-out infinite; /* Adjusted duration/timing */
   pointer-events: none; /* Don't interfere with clicks */
-  border-radius: 50%; /* Ensure shine respects the circular shape */
+  border-radius: 50%; /* Keep shine rounded */
 }
