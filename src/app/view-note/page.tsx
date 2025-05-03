@@ -150,6 +150,7 @@ const ViewNotePage = () => {
   const file = note.files && note.files.length > currentFileIndex ? note.files[currentFileIndex] : null;
   // Handle cases where file might be null before accessing properties
   const baseFileName = note.title ? note.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() : `note_${note.id || 'unknown'}`;
+  // Explicitly check file *before* calling getFileExtension which accesses file.type
   const fileExtension = file ? getFileExtension(file.type) : 'bin'; // Default extension if file is null
   const fileName = `${baseFileName}_${currentFileIndex + 1}.${fileExtension}`;
 
@@ -201,8 +202,10 @@ const ViewNotePage = () => {
           {/* File Display Area */}
           {note.files && note.files.length > 0 ? (
             <div className="mb-4 relative">
+              {/* Outer check: If file is null, this whole block is skipped */}
               {file ? (
                 <>
+                  {/* Inner check: Accessing file.type */}
                   {file.type && file.type.startsWith('image/') ? (
                     <div className="flex justify-center items-center relative group bg-muted rounded-md overflow-hidden border aspect-video">
                       <img
@@ -326,3 +329,4 @@ const ViewNotePage = () => {
 };
 
 export default ViewNotePage;
+
