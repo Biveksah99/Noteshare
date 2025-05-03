@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, {useEffect, useState} from 'react';
@@ -30,10 +29,11 @@ interface Note {
 }
 
 const ViewNotePage = () => {
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams(); // Keep using the hook
   const router = useRouter();
 
   // Extract parameters directly using searchParams.get()
+  // No React.use needed here in client component
   const noteId = searchParams?.get('id');
   const category = searchParams?.get('category');
   const fileIndexParam = searchParams?.get('fileIndex');

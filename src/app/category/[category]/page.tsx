@@ -1,13 +1,12 @@
-
 "use client";
 
-import React, {useEffect, useState} from 'react';
-import {useParams, useRouter} from 'next/navigation';
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
-import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
-import {format} from 'date-fns';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation'; // Removed useParams import
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { format } from 'date-fns';
 import Link from "next/link";
-import {File, Image as ImageIcon, CheckCircle2} from "lucide-react"; // Import CheckCircle2
+import { File, Image as ImageIcon, CheckCircle2 } from "lucide-react";
 
 // Interface for Note structure including uploader verification
 interface Note {
@@ -23,22 +22,22 @@ interface Note {
 
 const DESCRIPTION_PREVIEW_LIMIT = 100; // Limit for description preview
 
-const CategoryDetailPage = () => {
-  const params = useParams();
+// Changed component signature to accept params prop
+const CategoryDetailPage = ({ params }: { params: { category: string } }) => {
   const router = useRouter();
 
-  const category = React.useMemo(() => {
+  // Use useMemo with the params prop
+  const category = useMemo(() => {
     if (!params || typeof params.category !== 'string') {
       return '';
     }
-    // Decode URI component for category names with special characters
     try {
-       return decodeURIComponent(params.category);
+      return decodeURIComponent(params.category);
     } catch (e) {
-       console.error("Failed to decode category param:", e);
-       return params.category; // Fallback to original if decoding fails
+      console.error("Failed to decode category param:", e);
+      return params.category; // Fallback to original if decoding fails
     }
-  }, [params]);
+  }, [params]); // Dependency is now the params prop
 
   const [notes, setNotes] = useState<Note[]>([]); // Use Note interface
 
@@ -48,21 +47,23 @@ const CategoryDetailPage = () => {
       if (storedNotes) {
         try {
           const parsedNotes: Note[] = JSON.parse(storedNotes);
-           // Fetch verification status for each note's uploader
-           const notesWithVerification = parsedNotes.map(note => {
-              const userProfileRaw = localStorage.getItem('userProfile');
-              let uploaderIsVerified = false;
-              if (userProfileRaw) {
-                  try {
-                      const userProfile = JSON.parse(userProfileRaw);
-                      if (userProfile.fullName === note.uploader) {
-                          uploaderIsVerified = userProfile.isVerified || false;
-                      }
-                  } catch (profileError) {
-                      console.warn("Could not parse user profile for verification status", profileError);
-                  }
+          // Fetch verification status for each note's uploader
+          const notesWithVerification = parsedNotes.map(note => {
+            const userProfileRaw = localStorage.getItem('userProfile');
+            let uploaderIsVerified = false;
+            if (userProfileRaw) {
+              try {
+                const userProfile = JSON.parse(userProfileRaw);
+                // Use email or a unique ID if available in the note data
+                // Assuming uploader name matches fullName for now
+                if (userProfile.fullName === note.uploader) {
+                  uploaderIsVerified = userProfile.isVerified || false;
+                }
+              } catch (profileError) {
+                console.warn("Could not parse user profile for verification status", profileError);
               }
-              return { ...note, uploaderIsVerified };
+            }
+            return { ...note, uploaderIsVerified };
           });
           setNotes(notesWithVerification);
         } catch (error) {
@@ -85,18 +86,18 @@ const CategoryDetailPage = () => {
     if (fileType.startsWith('image/')) {
       return (
         <div className="mt-2 relative aspect-video overflow-hidden rounded-md border">
-           <img
-             src={firstFile.url}
-             alt="Note preview"
-             className="w-full h-full object-cover"
-             loading="lazy" // Add lazy loading
-             data-ai-hint="note preview image"
-           />
-            {files.length > 1 && (
-                <span className="absolute bottom-1 right-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
-                    +{files.length - 1} more
-                </span>
-            )}
+          <img
+            src={firstFile.url}
+            alt="Note preview"
+            className="w-full h-full object-cover"
+            loading="lazy"
+            data-ai-hint="note preview image"
+          />
+          {files.length > 1 && (
+            <span className="absolute bottom-1 right-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
+              +{files.length - 1} more
+            </span>
+          )}
         </div>
       );
     } else if (fileType === 'application/pdf') {
@@ -116,15 +117,15 @@ const CategoryDetailPage = () => {
             <Link key={note.id} href={`/view-note?id=${note.id}&category=${encodeURIComponent(category)}`} className="block group">
               <Card className="h-full neumorphic bg-card shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col overflow-hidden">
                 {/* File Preview Area */}
-                 {renderFilePreview(note.files)}
+                {renderFilePreview(note.files)}
 
                 {/* Content Area */}
                 <CardHeader className="p-4 flex-shrink-0">
                   <CardTitle className="text-lg mb-1 line-clamp-2">{note.title}</CardTitle>
                   <CardDescription className="text-xs flex items-center">
                     <Avatar className="h-5 w-5 mr-1.5">
-                       <AvatarImage src={`https://picsum.photos/seed/${note.uploader}/20/20`} alt={note.uploader} data-ai-hint="user avatar tiny"/>
-                       <AvatarFallback className="text-xs">{note.uploader.substring(0, 1)}</AvatarFallback>
+                      <AvatarImage src={`https://picsum.photos/seed/${note.uploader}/20/20`} alt={note.uploader} data-ai-hint="user avatar tiny"/>
+                      <AvatarFallback className="text-xs">{note.uploader.substring(0, 1)}</AvatarFallback>
                     </Avatar>
                     {note.uploader}
                     {note.uploaderIsVerified && <CheckCircle2 className="ml-1 h-3 w-3 text-blue-500 flex-shrink-0" />} {/* Blue tick */}
@@ -134,10 +135,10 @@ const CategoryDetailPage = () => {
                 </CardHeader>
                 <CardContent className="p-4 pt-0 flex-grow">
                   <CardDescription className="text-sm line-clamp-3">
-                      {note.description.length > DESCRIPTION_PREVIEW_LIMIT
-                          ? `${note.description.substring(0, DESCRIPTION_PREVIEW_LIMIT)}...`
-                          : note.description
-                      }
+                    {note.description.length > DESCRIPTION_PREVIEW_LIMIT
+                      ? `${note.description.substring(0, DESCRIPTION_PREVIEW_LIMIT)}...`
+                      : note.description
+                    }
                   </CardDescription>
                 </CardContent>
               </Card>
@@ -145,7 +146,7 @@ const CategoryDetailPage = () => {
           ))}
         </div>
       ) : (
-         <p className="text-center text-muted-foreground mt-10">No notes found in this category yet.</p>
+        <p className="text-center text-muted-foreground mt-10">No notes found in this category yet.</p>
       )}
     </div>
   );
