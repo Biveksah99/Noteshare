@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation'; // Removed useParams import
+import { useRouter } from 'next/navigation'; // Correct import
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from 'date-fns';
@@ -29,19 +29,20 @@ const CategoryDetailPage = ({ params }: { params: { category: string } }) => {
   const router = useRouter();
 
   // Use React.use to unwrap the promise/value from params
-   const categoryParam = React.use(params.category);
+   const categoryParam = useMemo(() => params.category, [params.category]);
 
    const category = useMemo(() => {
-     if (!categoryParam || typeof categoryParam !== 'string') {
-       return ''; // Return empty string if param is invalid
+     // Check if params exists and category property is a string
+     if (!params || typeof params.category !== 'string') {
+       return ''; // Return empty string if params or category is invalid
      }
      try {
-       return decodeURIComponent(categoryParam);
+       return decodeURIComponent(params.category);
      } catch (e) {
        console.error("Failed to decode category param:", e);
-       return categoryParam; // Fallback to original if decoding fails
+       return params.category; // Fallback to original if decoding fails
      }
-   }, [categoryParam]); // Dependency is the unwrapped value
+   }, [params]); // Dependency is the raw params object
 
 
   const [notes, setNotes] = useState<Note[]>([]); // Use Note interface
@@ -137,7 +138,8 @@ const CategoryDetailPage = ({ params }: { params: { category: string } }) => {
                       <AvatarFallback className="text-xs">{note.uploader.substring(0, 1)}</AvatarFallback>
                     </Avatar>
                     <span className="font-medium mr-0.5">{note.uploader}</span> {/* Add small margin */}
-                    {note.uploaderIsVerified && <VerifiedBadge className="h-3 w-3 flex-shrink-0" />} {/* Blue tick */}
+                    {/* Adjusted badge size and margin */}
+                    {note.uploaderIsVerified && <VerifiedBadge className="h-3.5 w-3.5 ml-0.5 flex-shrink-0" />}
                     <span className="mx-1">·</span>
                     {format(new Date(note.timestamp), 'MMM d, yyyy')}
                   </CardDescription>
@@ -162,5 +164,3 @@ const CategoryDetailPage = ({ params }: { params: { category: string } }) => {
 };
 
 export default CategoryDetailPage;
-
-    

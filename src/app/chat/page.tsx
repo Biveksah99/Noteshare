@@ -287,7 +287,8 @@ const ChatPage = () => {
                 </Avatar>
                 <h1 className="text-xl font-semibold text-secondary-foreground flex items-center flex-shrink min-w-0"> {/* Allow shrinking */}
                     <span className="truncate">{adminDetails.displayName}</span> {/* Truncate long names */}
-                    {adminDetails.isVerified && <VerifiedBadge className="ml-1.5 h-4 w-4 flex-shrink-0" />} {/* Blue tick for admin */}
+                    {/* Adjusted badge size and margin */}
+                    {adminDetails.isVerified && <VerifiedBadge className="ml-1.5 h-4 w-4 flex-shrink-0" />}
                 </h1>
             </div>
 
@@ -315,7 +316,8 @@ const ChatPage = () => {
                                 {/* Sender Name and Verification */}
                                 <p className={`text-xs font-semibold mb-1 flex items-center ${msg.senderId === user.uid ? 'justify-end' : 'justify-start'}`}>
                                     <span>{msg.senderDisplayName || 'User'}</span>
-                                    {msg.senderIsVerified && <VerifiedBadge className="ml-1 h-3 w-3 flex-shrink-0" />} {/* Blue tick */}
+                                     {/* Adjusted badge size and margin */}
+                                     {msg.senderIsVerified && <VerifiedBadge className="ml-1 h-3.5 w-3.5 flex-shrink-0" />}
                                 </p>
 
                                 {msg.text && <p className="text-sm break-words">{msg.text}</p>}
@@ -382,5 +384,3 @@ const ChatPage = () => {
 };
 
 export default ChatPage;
-
-    

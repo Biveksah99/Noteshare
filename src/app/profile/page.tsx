@@ -330,7 +330,8 @@ const ProfilePage = () => {
        <div className="flex justify-between items-center border-b pb-2 mb-6"> {/* Increased margin-bottom */}
           <h1 className="text-2xl font-semibold flex items-center">
              <span>{currentValues.fullName || "User"}</span>
-             {currentValues.isVerified && <VerifiedBadge className="ml-1.5 h-5 w-5 flex-shrink-0" />} {/* Adjusted margin */}
+             {/* Adjusted badge size and margin */}
+             {currentValues.isVerified && <VerifiedBadge className="ml-1.5 h-4 w-4 flex-shrink-0" />}
           </h1>
           <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
             <DialogTrigger asChild>
@@ -507,7 +508,8 @@ const ProfilePage = () => {
           <ProfileDetail label="Full Name">
              <span className="text-sm text-muted-foreground flex items-center">
                  <span>{currentValues.fullName || 'N/A'}</span>
-                 {currentValues.isVerified && <VerifiedBadge className="ml-1 h-4 w-4 flex-shrink-0" />} {/* Adjusted margin */}
+                  {/* Adjusted badge size and margin */}
+                  {currentValues.isVerified && <VerifiedBadge className="ml-1 h-4 w-4 flex-shrink-0" />}
              </span>
           </ProfileDetail>
           <ProfileDetail label="Email" value={currentValues.email || 'N/A'} />
@@ -575,5 +577,3 @@ const ProfilePage = () => {
 }
 
 export default ProfilePage
-
-    
