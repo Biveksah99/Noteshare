@@ -111,7 +111,7 @@ function ViewNoteContent() {
     }
     setIsLoading(false); // Finish loading
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category, noteId, fileIndexParam]); // Keep router out of dependencies
+  }, [category, noteId, fileIndexParam, router]); // Add router back
 
 
   // Wrap URL update logic in useCallback
@@ -190,9 +190,9 @@ function ViewNoteContent() {
     <div className="container mx-auto p-4 md:p-6"> {/* Adjusted padding */}
       <Card className="mb-4 neumorphic bg-card shadow-lg rounded-lg overflow-hidden">
         <CardHeader className="flex flex-row items-start p-4 border-b bg-muted/30"> {/* items-start */}
-          {/* Link wrapping Avatar and uploader name */}
-          <Link href={`/profile/${note.uploaderId}`} className="flex items-center mr-4 flex-shrink-0 mt-1 group">
-            <Avatar className="mr-2 h-10 w-10"> {/* Removed margin-right from Avatar, added to Link */}
+          {/* Avatar and uploader info displayed directly, not wrapped in Link */}
+          <div className="flex items-center mr-4 flex-shrink-0 mt-1">
+            <Avatar className="mr-2 h-10 w-10">
               <AvatarImage
                 src={note.uploaderProfileImage || `https://picsum.photos/seed/${note.uploader}/40/40`}
                 alt={note.uploader || 'Uploader'}
@@ -204,7 +204,7 @@ function ViewNoteContent() {
             <span className="font-medium mr-0.5 group-hover:underline">{note.uploader || 'Unknown User'}</span>
              {/* Adjusted badge size and margin */}
             {note.uploaderIsVerified && <VerifiedBadge className="h-4 w-4 ml-0.5 flex-shrink-0" />} {/* Adjusted size */}
-          </Link>
+          </div>
           <div className="flex-1 min-w-0">
             <CardTitle className="text-xl truncate">{note.title || 'Untitled Note'}</CardTitle>
             <CardDescription className="text-xs flex items-center flex-wrap mt-1"> {/* Added mt-1 */}

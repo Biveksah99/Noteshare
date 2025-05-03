@@ -141,8 +141,8 @@ function CategoryDetailContent() {
                 <CardHeader className="p-4 flex-shrink-0">
                   <CardTitle className="text-lg mb-1 line-clamp-2">{note.title}</CardTitle>
                   <CardDescription className="text-xs flex items-center flex-wrap mt-1"> {/* Allow wrapping */}
-                   {/* Link wrapping Avatar and uploader name */}
-                    <Link href={`/profile/${note.uploaderId}`} className="flex items-center group mr-1" onClick={(e) => e.stopPropagation()}> {/* Prevent card link navigation */}
+                   {/* Avatar and uploader name displayed directly, not wrapped in Link */}
+                    <div className="flex items-center mr-1">
                        <Avatar className="h-5 w-5 mr-1.5 flex-shrink-0 group-hover:opacity-80 transition-opacity">
                           <AvatarImage
                             src={note.uploaderProfileImage || `https://picsum.photos/seed/${note.uploader}/20/20`}
@@ -153,7 +153,7 @@ function CategoryDetailContent() {
                        </Avatar>
                        <span className="font-medium group-hover:underline">{note.uploader}</span>
                        {note.uploaderIsVerified && <VerifiedBadge className="h-3.5 w-3.5 ml-0.5 flex-shrink-0" />}
-                    </Link>
+                    </div>
                     <span className="mx-1">·</span>
                     <span title={new Date(note.timestamp).toLocaleString()}> {/* Add title for exact time */}
                         {format(new Date(note.timestamp), 'MMM d, yyyy')}

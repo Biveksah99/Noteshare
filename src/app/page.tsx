@@ -200,8 +200,8 @@ const Home = () => {
                   <Link key={upload.id} href={`/view-note?id=${upload.id}&category=${encodeURIComponent(upload.category)}`} className="block group">
                     <Card className="neumorphic h-full transition-shadow duration-200 group-hover:shadow-lg overflow-hidden"> {/* Added overflow hidden */}
                       <CardHeader className="flex flex-row items-start space-x-3 p-4"> {/* Use items-start */}
-                        {/* Link wrapping Avatar only, prevents card link navigation on avatar click */}
-                        <Link href={`/profile/${upload.uploaderId}`} onClick={(e) => e.stopPropagation()} className="group flex-shrink-0 mt-1">
+                        {/* Avatar displayed directly, not wrapped in a Link */}
+                        <div className="flex-shrink-0 mt-1">
                           <Avatar className="h-10 w-10 group-hover:opacity-80 transition-opacity">
                             <AvatarImage
                                 src={upload.uploaderProfileImage || `https://picsum.photos/seed/${upload.uploader}/40/40`}
@@ -210,17 +210,17 @@ const Home = () => {
                               />
                             <AvatarFallback className="group-hover:bg-muted/80 transition-colors">{upload.uploader ? upload.uploader.substring(0, 2).toUpperCase() : '??'}</AvatarFallback>
                           </Avatar>
-                        </Link>
+                        </div>
                         <div className="flex-1 min-w-0">
                           <CardTitle className="text-lg line-clamp-1">{upload.title}</CardTitle>
                           <CardDescription className="text-xs flex items-center flex-wrap mt-1"> {/* Added margin top */}
                              Uploaded by&nbsp;
-                             {/* Link wrapping uploader name */}
-                              <Link href={`/profile/${upload.uploaderId}`} className="font-medium mr-0.5 hover:underline group" onClick={(e) => e.stopPropagation()}>
+                             {/* Uploader name displayed directly, not wrapped in a Link */}
+                              <span className="font-medium mr-0.5">
                                   <span>{upload.uploader}</span>
                                    {/* Adjusted badge size and margin */}
                                    {upload.uploaderIsVerified && <VerifiedBadge className="h-3.5 w-3.5 ml-0.5 flex-shrink-0 inline-block align-middle" />}
-                              </Link>
+                              </span>
                              <span className="mx-1">&middot;</span>
                              {format(new Date(upload.timestamp), 'MMM d, yyyy')}
                              <span className="mx-1">&middot;</span>
