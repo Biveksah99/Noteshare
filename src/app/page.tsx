@@ -2,21 +2,21 @@
 "use client";
 
 import React from 'react';
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card';
-import {Button} from '@/components/ui/button';
-import {useEffect, useState} from 'react';
-import {useRouter} from 'next/navigation';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Import Avatar components
-import {Book, Brain, Calendar, Globe, Upload as UploadIcon } from "lucide-react"; // Renamed Upload icon
-import { VerifiedBadge } from '@/components/ui/verified-badge'; // Import the new badge
-import {format} from 'date-fns';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Calendar, Globe, Upload as UploadIcon } from "lucide-react"; // Correct Upload icon import
+import { VerifiedBadge } from '@/components/ui/verified-badge';
+import { format } from 'date-fns';
 import Link from "next/link";
-
+import NepaliDate from 'nepali-date-converter'; // Import the Nepali date converter
 
 // Updated announcements
 const announcements = [
   {
-    id: '1', // Use string IDs for consistency
+    id: '1',
     title: 'Welcome to NoteShare!',
     content: 'Start sharing your study materials and collaborate with fellow students. Upload notes, PDFs, images, and more!',
     date: '2024-05-01'
@@ -37,22 +37,22 @@ const announcements = [
 
 // Interface for Note structure including uploader verification and profile image
 interface Note {
-  id: string; // Ensure ID is string
+  id: string;
   title: string;
   description: string;
   uploader: string;
-  uploaderId?: string; // Added uploaderId
-  uploaderProfileImage?: string | null; // Added for profile image URL
+  uploaderId?: string;
+  uploaderProfileImage?: string | null;
   timestamp: string; // ISO string date
-  files: Array<{ url: string; type: string; name?: string }>; // Added optional name
+  files: Array<{ url: string; type: string; name?: string }>;
   category: string;
-  uploaderIsVerified?: boolean; // Added for verification status
+  uploaderIsVerified?: boolean;
 }
 
 
 const Home = () => {
   const router = useRouter();
-  const [recentUploads, setRecentUploads] = useState<Note[]>([]); // Use Note interface
+  const [recentUploads, setRecentUploads] = useState<Note[]>([]);
   const [nepaliDate, setNepaliDate] = useState('');
 
 
@@ -62,14 +62,14 @@ const Home = () => {
     const uploads: Note[] = [];
 
     allKeys.forEach(key => {
-      // Skip non-category keys and the profile/admin/firebase keys
-      if (key === 'userProfile' || key === 'adminUserProfile' || key === 'categories' || key.startsWith('firebase:')) {
+      // Skip non-category keys and other specific keys
+      if (['userProfile', 'adminUserProfile', 'categories'].includes(key) || key.startsWith('firebase:')) {
          return;
       }
 
       try {
         const item = localStorage.getItem(key);
-        // Ensure item is a non-empty string before parsing
+        // Gracefully handle non-JSON items or parsing errors
         if (item && typeof item === 'string' && item.trim() !== '') {
           try {
             const parsedItem = JSON.parse(item);
@@ -78,14 +78,13 @@ const Home = () => {
                parsedItem.forEach((note: any) => {
                  // Basic validation for note structure
                  if(note && typeof note === 'object' && note.id && note.title && note.timestamp && note.files && note.uploaderId) { // Ensure uploaderId exists
-                    // Add category if missing (might happen with older data)
+                    // Add category if missing
                     if (!note.category) {
                        note.category = key;
                     }
                      // Add uploaderProfileImage and uploaderIsVerified if missing
                      if (note.uploaderIsVerified === undefined) {
                        // --- TEMPORARY FOR TESTING BLUE TICK ---
-                       // note.uploaderIsVerified = false; // Default to false
                        note.uploaderIsVerified = true; // Keep forced true for testing
                        // --- END TEMPORARY ---
                      }
@@ -98,17 +97,15 @@ const Home = () => {
                  }
                });
             } else {
-                // Handle cases where the item is not an array but valid JSON (e.g., a single object)
-                // You might want to wrap it in an array or handle it differently based on your logic
                 console.warn(`Item with key ${key} is not an array, skipping.`);
             }
           } catch (e) {
-            // Gracefully handle non-JSON items or parsing errors
-            if (e instanceof SyntaxError) {
-               // console.warn(`Item with key ${key} is not valid JSON, skipping.`);
-            } else {
+            // Only log syntax errors, ignore others that might be expected
+             if (e instanceof SyntaxError) {
+                // console.warn(`Item with key ${key} is not valid JSON, skipping.`);
+             } else {
                console.error(`Failed to process item from localStorage for key ${key}.`, e);
-            }
+             }
           }
         } else {
           // console.warn(`Item with key ${key} is not a string or is null/empty, skipping.`);
@@ -126,19 +123,15 @@ const Home = () => {
 
 
   useEffect(() => {
-    // Function to get Nepali date - using browser's locale for simplicity
-    const getFormattedDate = () => {
+    // Function to get Nepali date using the nepali-date-converter library
+    const getFormattedNepaliDate = () => {
         try {
-            // Attempt to use Nepali locale if supported by the browser
-            return new Intl.DateTimeFormat('ne-NP', {
-                year: 'numeric',
-                month: 'long', // Use long month name
-                day: 'numeric',
-                weekday: 'long' // Add weekday
-            }).format(new Date());
+            const dateInBS = new NepaliDate(new Date());
+            // Format the date: YYYY-MM-DD BS, or choose another format like .format('ddd, DD MMMM YYYY')
+            return dateInBS.format('YYYY-MM-DD') + ' BS';
         } catch (e) {
-            console.warn("Nepali locale 'ne-NP' not supported, falling back to default.", e);
-            // Fallback to default locale with a similar format
+            console.error("Error converting date to Nepali date:", e);
+            // Fallback to Gregorian date if conversion fails
             return new Date().toLocaleDateString(undefined, {
                 year: 'numeric',
                 month: 'long',
@@ -147,7 +140,7 @@ const Home = () => {
             });
         }
     };
-    setNepaliDate(getFormattedDate());
+    setNepaliDate(getFormattedNepaliDate());
   }, []);
 
 
@@ -202,30 +195,36 @@ const Home = () => {
                   <Link key={upload.id} href={`/view-note?id=${upload.id}&category=${encodeURIComponent(upload.category)}`} className="block group">
                     <Card className="neumorphic h-full transition-shadow duration-200 group-hover:shadow-lg overflow-hidden"> {/* Added overflow hidden */}
                       <CardHeader className="flex flex-row items-start space-x-3 p-4"> {/* Use items-start */}
-                        {/* Wrap Avatar and Name in a Link to the profile, stop propagation */}
+                        {/* Link wrapping Avatar only, prevents card link navigation on avatar click */}
                         <Link
                           href={`/profile/${upload.uploaderId}`}
                           onClick={(e) => e.stopPropagation()} // Prevent card link click
-                          className="flex items-center flex-shrink-0 mt-1 group/uploader hover:underline"
+                          className="flex flex-shrink-0 mt-1 group/uploader"
                         >
-                          <Avatar className="h-10 w-10 mr-2 group-hover/uploader:opacity-80 transition-opacity">
-                            <AvatarImage
-                                src={upload.uploaderProfileImage || `https://picsum.photos/seed/${upload.uploader}/40/40`}
-                                alt={upload.uploader}
-                                data-ai-hint="user avatar"
-                              />
-                            <AvatarFallback className="group-hover/uploader:bg-muted/80 transition-colors">{upload.uploader ? upload.uploader.substring(0, 2).toUpperCase() : '??'}</AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium mr-0.5 flex items-center">
-                             <span>{upload.uploader}</span>
-                             {/* Adjusted badge size and margin */}
-                             {upload.uploaderIsVerified && <VerifiedBadge className="h-3.5 w-3.5 ml-0.5 flex-shrink-0 inline-block align-middle" />}
-                          </span>
+                           <Avatar className="h-10 w-10 group-hover/uploader:opacity-80 transition-opacity">
+                             <AvatarImage
+                                 src={upload.uploaderProfileImage || `https://picsum.photos/seed/${upload.uploader}/40/40`}
+                                 alt={upload.uploader || 'Uploader'}
+                                 data-ai-hint="user avatar"
+                               />
+                             <AvatarFallback className="group-hover/uploader:bg-muted/80 transition-colors">{upload.uploader ? upload.uploader.substring(0, 2).toUpperCase() : '??'}</AvatarFallback>
+                           </Avatar>
                         </Link>
-                        {/* Note Title and Timestamp (not linked to profile) */}
+                        {/* Note Title, Uploader Name with Badge, and Timestamp (not linked to profile) */}
                         <div className="flex-1 min-w-0">
                           <CardTitle className="text-lg line-clamp-1">{upload.title}</CardTitle>
                           <CardDescription className="text-xs flex items-center flex-wrap mt-1"> {/* Added margin top */}
+                            {/* Link to user profile from name */}
+                            <Link
+                              href={`/profile/${upload.uploaderId}`}
+                              onClick={(e) => e.stopPropagation()} // Prevent card link click
+                              className="font-medium mr-0.5 flex items-center hover:underline"
+                            >
+                               <span>{upload.uploader}</span>
+                               {/* Adjusted badge size and margin */}
+                               {upload.uploaderIsVerified && <VerifiedBadge className="h-3.5 w-3.5 ml-0.5 flex-shrink-0 inline-block align-middle" />}
+                            </Link>
+                            <span className="mx-1">&middot;</span>
                              {format(new Date(upload.timestamp), 'MMM d, yyyy')}
                              <span className="mx-1">&middot;</span>
                              <span className="font-semibold capitalize">{upload.category}</span> {/* Show category */}
