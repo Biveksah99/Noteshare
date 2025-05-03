@@ -22,12 +22,12 @@ import { useRouter } from "next/navigation"
 import { useState, useRef, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { Edit, Check, Crop, User as UserIcon } from "lucide-react"
+import { Edit, Check, Crop, User as UserIcon, CheckCircle2 } from "lucide-react" // Import CheckCircle2
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import ReactCrop, { type Crop as CropType, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { Separator } from "@/components/ui/separator"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select" // Import Select components
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 // ~60 words * 5 chars/word = 300 characters
 const BIO_MAX_LENGTH = 300;
@@ -49,6 +49,7 @@ const formSchema = z.object({
   bio: z.string().max(BIO_MAX_LENGTH, { // Updated bio validation to max characters
     message: `Bio must be at most ${BIO_MAX_LENGTH} characters (approx. 60 words).`,
   }).optional(), // Make bio optional as it's not in target UI
+  isVerified: z.boolean().optional().default(false), // Added isVerified field
 })
 
 type FormValues = z.infer<typeof formSchema>;
@@ -104,11 +105,12 @@ function getCroppedImg(image: HTMLImageElement, crop: PixelCrop, fileName: strin
 }
 
 // Simple component to display profile details
-const ProfileDetail = ({ label, value }: { label: string, value?: string }) => (
-  value ? (
-    <div className="flex justify-between py-1">
+const ProfileDetail = ({ label, value, children }: { label: string, value?: string, children?: React.ReactNode }) => (
+  value || children ? (
+    <div className="flex justify-between items-center py-1">
       <span className="font-semibold text-sm">{label}</span>
-      <span className="text-sm text-muted-foreground">{value}</span>
+      {value && <span className="text-sm text-muted-foreground">{value}</span>}
+      {children}
     </div>
   ) : null
 );
@@ -138,12 +140,13 @@ const ProfilePage = () => {
     },
     defaultValues: {
       fullName: "Noah Trevor", // Example data matching the image
-      email: "noah.t@yahoo.com",
+      email: "noah.t@gmail.com", // Ensure default is valid gmail
       gender: "Male",
       contactNumber: "08011985867453",
       address: "South Africa",
       section: "CIT (400 Level)",
-      bio: "Passionate about sharing knowledge and helping others learn.", // Keeping bio, though not in target UI
+      bio: "Passionate about sharing knowledge and helping others learn.",
+      isVerified: false, // Default verification status
     },
   })
 
@@ -172,9 +175,12 @@ const ProfilePage = () => {
 
     // Save profile data (including the potentially updated image URL) to localStorage
     try {
-      const profileToSave = { ...values, profileImage };
+      // Keep the existing isVerified status unless an admin changes it elsewhere
+      const currentProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+      const profileToSave = { ...values, profileImage, isVerified: currentProfile.isVerified || false };
       localStorage.setItem('userProfile', JSON.stringify(profileToSave));
       console.log("Profile saved to localStorage:", profileToSave);
+      form.reset(profileToSave); // Update form state after saving
     } catch (error) {
       console.error("Failed to save profile data to localStorage", error);
       toast({
@@ -241,7 +247,8 @@ const ProfilePage = () => {
         setProfileImage(croppedImageUrl); // Update profile image state
         // Immediately save the updated image URL with the rest of the profile data
         const currentValues = form.getValues();
-        const profileToSave = { ...currentValues, profileImage: croppedImageUrl };
+        const currentProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+        const profileToSave = { ...currentValues, profileImage: croppedImageUrl, isVerified: currentProfile.isVerified || false };
         localStorage.setItem('userProfile', JSON.stringify(profileToSave));
 
         setIsCropDialogOpen(false);
@@ -269,12 +276,15 @@ const ProfilePage = () => {
     }
   };
 
-  const currentValues = form.getValues(); // Get current form values for display
+  const currentValues = form.watch(); // Use watch to reactively get values for display
 
   return (
     <div className="container mx-auto p-6">
        <div className="flex justify-between items-center border-b pb-2 mb-6"> {/* Increased margin-bottom */}
-          <h1 className="text-2xl font-semibold">Viewing {currentValues.fullName}'s profile</h1>
+          <h1 className="text-2xl font-semibold flex items-center">
+            Viewing {currentValues.fullName}'s profile
+            {currentValues.isVerified && <CheckCircle2 className="ml-2 h-5 w-5 text-blue-500" />} {/* Blue tick */}
+          </h1>
           <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
@@ -447,7 +457,12 @@ const ProfilePage = () => {
 
         {/* Profile Details */}
         <div className="w-full md:w-3/4 border rounded-md p-4 neumorphic bg-card">
-          <ProfileDetail label="Full Name" value={currentValues.fullName} />
+          <ProfileDetail label="Full Name">
+             <span className="text-sm text-muted-foreground flex items-center">
+                {currentValues.fullName}
+                {currentValues.isVerified && <CheckCircle2 className="ml-1 h-4 w-4 text-blue-500" />} {/* Blue tick */}
+             </span>
+          </ProfileDetail>
           <ProfileDetail label="Email" value={currentValues.email} />
           <ProfileDetail label="Gender" value={currentValues.gender} />
           <ProfileDetail label="Phone" value={currentValues.contactNumber} />
@@ -513,3 +528,5 @@ const ProfilePage = () => {
 }
 
 export default ProfilePage
+
+    

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -6,9 +7,8 @@ import {Button} from '@/components/ui/button';
 import {useEffect, useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
-import {Book, Brain, Calendar} from "lucide-react";
+import {Book, Brain, Calendar, CheckCircle2, Globe} from "lucide-react"; // Import CheckCircle2
 import {format} from 'date-fns';
-import {Globe} from "lucide-react";
 import Link from "next/link";
 
 const announcements = [
@@ -24,32 +24,73 @@ const announcements = [
   },
 ];
 
+// Interface for Note structure including uploader verification
+interface Note {
+  id: number | string;
+  title: string;
+  description: string;
+  uploader: string;
+  timestamp: string; // ISO string date
+  files: Array<{ url: string; type: string }>;
+  category: string;
+  uploaderIsVerified?: boolean; // Added for verification status
+}
+
+
 const Home = () => {
   const router = useRouter();
-  const [recentUploads, setRecentUploads] = useState<any[]>([]);
+  const [recentUploads, setRecentUploads] = useState<Note[]>([]); // Use Note interface
+  const [nepaliDate, setNepaliDate] = useState('');
 
   useEffect(() => {
     // Load recent uploads from local storage
     const allKeys = Object.keys(localStorage);
-    const uploads: any[] = [];
+    const uploads: Note[] = [];
 
     allKeys.forEach(key => {
+      // Skip non-category keys and the profile key
+      if (key === 'userProfile' || key === 'categories' || key.startsWith('firebase:')) {
+         return;
+      }
+
       try {
         const item = localStorage.getItem(key);
         if (item && typeof item === 'string') { // Check if item is a string
           try {
             const parsedItem = JSON.parse(item);
-            if (Array.isArray(parsedItem) && parsedItem.length > 0 && parsedItem[0].hasOwnProperty('timestamp')) {
-              uploads.push(...parsedItem);
+            if (Array.isArray(parsedItem) && parsedItem.length > 0 && parsedItem[0]?.hasOwnProperty('timestamp')) {
+              // Add category to each note and push to uploads
+               parsedItem.forEach((note: any) => {
+                 if(note.id && note.title && note.description && note.uploader && note.timestamp && note.files) {
+                   // Fetch uploader verification status from userProfile (if exists)
+                   const userProfileRaw = localStorage.getItem('userProfile');
+                   let uploaderIsVerified = false;
+                   if(userProfileRaw) {
+                     try {
+                       const userProfile = JSON.parse(userProfileRaw);
+                       // Assuming uploader name matches fullName in profile
+                       if (userProfile.fullName === note.uploader) {
+                         uploaderIsVerified = userProfile.isVerified || false;
+                       }
+                     } catch (profileError) {
+                       console.warn("Could not parse user profile for verification status", profileError);
+                     }
+                   }
+
+                   uploads.push({ ...note, category: key, uploaderIsVerified });
+                 } else {
+                   console.warn(`Skipping invalid note structure in category ${key}:`, note);
+                 }
+               });
             }
           } catch (e) {
-            console.warn(`Failed to parse item from localStorage for key ${key}.  It may not be a valid JSON object; skipping.`, e);
+            console.warn(`Failed to parse item from localStorage for key ${key}. It may not be a valid JSON object; skipping.`, e);
           }
         } else {
-          console.warn(`Item with key ${key} is not a string, skipping. Value:`, item);
+          console.warn(`Item with key ${key} is not a string or is null, skipping. Value:`, item);
         }
       } catch (e) {
-        console.error("Failed to retrieve item from localStorage", e);
+        console.error("Failed to retrieve or process item from localStorage", e);
       }
     });
 
@@ -59,25 +100,41 @@ const Home = () => {
 
   }, []);
 
+
+  useEffect(() => {
+    // Function to get Nepali date - using browser's locale for simplicity
+    // Note: This doesn't guarantee a Bikram Sambat calendar.
+    // For accurate BS date, a library like 'nepali-date-converter' would be needed,
+    // but it requires installation and might have compatibility issues (as seen before).
+    // Using Intl.DateTimeFormat as a fallback for now.
+    const getFormattedDate = () => {
+        try {
+            // Attempt to use Nepali locale if supported by the browser
+            return new Intl.DateTimeFormat('ne-NP', {
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric',
+            }).format(new Date());
+        } catch (e) {
+            console.warn("Nepali locale 'ne-NP' not supported, falling back to default.", e);
+            // Fallback to default locale
+            return new Date().toLocaleDateString();
+        }
+    };
+    setNepaliDate(getFormattedDate());
+  }, []);
+
+
   const handleUploadClick = () => {
     router.push('/upload'); // Navigate to the /upload route
   };
 
-  const getNepaliDate = () => {
-    const today = new Date();
-    return today.toLocaleDateString('en-NP', { // Use Nepali locale
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-    });
-  };
-
-
   return (
     <div className="container mx-auto p-6">
-      <div className="flex justify-end">
-        <Button variant="ghost" size="icon" className="neumorphic">
-          {getNepaliDate()}
+      <div className="flex justify-end mb-4">
+        <Button variant="ghost" size="sm" className="neumorphic flex items-center text-sm">
+          <Calendar className="mr-1 h-4 w-4"/>
+          {nepaliDate || "Loading date..."}
         </Button>
       </div>
 
@@ -87,51 +144,69 @@ const Home = () => {
           <Globe className="mr-2"/>
           Notice Board
         </h2>
-        {announcements.map((announcement) => (
-          <Card key={announcement.id} className="mb-4 neumorphic">
-            <CardHeader>
-              <CardTitle>{announcement.title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CardDescription>{announcement.content}</CardDescription>
-            </CardContent>
-          </Card>
-        ))}
+        <div className="space-y-4 max-h-80 overflow-y-auto p-1"> {/* Added scroll for long notice boards */}
+            {announcements.map((announcement) => (
+              <Card key={announcement.id} className="neumorphic bg-card">
+                <CardHeader>
+                  <CardTitle>{announcement.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>{announcement.content}</CardDescription>
+                </CardContent>
+              </Card>
+            ))}
+        </div>
       </section>
 
       {/* Recent Uploads Section */}
       <section className="mb-8">
         <h2 className="text-2xl font-semibold mb-4">Recent Uploads</h2>
-        {recentUploads.map((upload) => (
-          <Link key={upload.id} href={`/view-note?id=${upload.id}&category=${upload.category}`} className="block">
-            <Card className="mb-4 neumorphic">
-              <CardHeader className="flex flex-row items-center">
-                <Avatar className="mr-4 h-8 w-8">
-                  <AvatarImage src="https://picsum.photos/id/237/200/300" alt={upload.uploader}/>
-                  <AvatarFallback>{upload.uploader.substring(0, 2)}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <CardTitle>{upload.title}</CardTitle>
-                  <CardDescription>
-                    Uploaded by {upload.uploader} on{' '}
-                    {format(new Date(upload.timestamp), 'yyyy-MM-dd HH:mm')}
-                  </CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>{upload.description.substring(0, 50)}</CardDescription>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+         {recentUploads.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {recentUploads.map((upload) => (
+                  <Link key={upload.id} href={`/view-note?id=${upload.id}&category=${upload.category}`} className="block group">
+                    <Card className="neumorphic h-full transition-shadow duration-200 group-hover:shadow-lg">
+                      <CardHeader className="flex flex-row items-center space-x-3">
+                        <Avatar className="h-10 w-10">
+                          {/* Placeholder image - Consider fetching user's actual avatar */}
+                          <AvatarImage src={`https://picsum.photos/seed/${upload.uploader}/40/40`} alt={upload.uploader} data-ai-hint="user avatar"/>
+                          <AvatarFallback>{upload.uploader.substring(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <CardTitle className="text-lg">{upload.title}</CardTitle>
+                          <CardDescription className="text-xs flex items-center">
+                             Uploaded by {upload.uploader}
+                             {upload.uploaderIsVerified && <CheckCircle2 className="ml-1 h-3 w-3 text-blue-500" />} {/* Blue tick */}
+                              {' on '}
+                             {format(new Date(upload.timestamp), 'PPp')} {/* More detailed format */}
+                          </CardDescription>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <CardDescription className="text-sm line-clamp-2"> {/* Limit description lines */}
+                            {upload.description}
+                        </CardDescription>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+            </div>
+         ) : (
+            <p className="text-muted-foreground">No recent uploads yet.</p>
+         )}
       </section>
 
-      {/* Upload Button */}
-      <Button onClick={handleUploadClick} className="bg-accent text-accent-foreground">
-        Upload Study Materials
-      </Button>
+      {/* Upload Button - Consider making it a FAB */}
+      <div className="text-center mt-6">
+        <Button onClick={handleUploadClick} className="bg-accent text-accent-foreground shadow-md hover:bg-accent/90">
+            Upload Study Materials
+        </Button>
+      </div>
     </div>
   );
 };
 
 export default Home;
+
+
+    
