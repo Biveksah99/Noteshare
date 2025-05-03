@@ -117,7 +117,7 @@ const Home = () => {
 
     // Sort uploads by timestamp (newest first)
     uploads.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    setRecentUploads(uploads.slice(0, 2)); // Display only the 2 most recent uploads
+    setRecentUploads(uploads.slice(0, 6)); // Display the 6 most recent uploads
 
   }, []);
 
@@ -126,11 +126,16 @@ const Home = () => {
     // Function to get Nepali date using the nepali-date-converter library
     const getFormattedNepaliDate = () => {
         try {
-            const dateInBS = new NepaliDate(new Date());
+            const dateInBS = new NepaliDate(); // Use current date by default
             // Format the date: YYYY-MM-DD BS, or choose another format like .format('ddd, DD MMMM YYYY')
             return dateInBS.format('YYYY-MM-DD') + ' BS';
         } catch (e) {
-            console.error("Error converting date to Nepali date:", e);
+            // Catch specific errors if the library throws them, e.g., date out of range
+            if (e instanceof Error && e.message.includes("support")) {
+                 console.warn("Nepali date conversion error (likely out of supported range):", e.message);
+            } else {
+                console.error("Error converting date to Nepali date:", e);
+            }
             // Fallback to Gregorian date if conversion fails
             return format(new Date(), 'PPP'); // e.g., May 3, 2025
         }
@@ -184,7 +189,7 @@ const Home = () => {
       <section className="mb-8">
         <h2 className="text-2xl font-semibold mb-4">Recent Uploads</h2>
          {recentUploads.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"> {/* Adjusted grid for medium screens */}
                 {recentUploads.map((upload) => (
                   // Link wrapping the card, directs to the specific note view
                   <Link key={upload.id} href={`/view-note?id=${upload.id}&category=${encodeURIComponent(upload.category)}`} className="block group">
@@ -195,7 +200,7 @@ const Home = () => {
                            <Link href={`/profile/${upload.uploaderId}`} onClick={(e) => e.stopPropagation()} className="block">
                                <Avatar className="h-10 w-10 group-hover/uploader:opacity-80 transition-opacity">
                                  <AvatarImage
-                                     src={upload.uploaderProfileImage || `https://picsum.photos/seed/${upload.uploader}/40/40`}
+                                     src={upload.uploaderProfileImage || `https://picsum.photos/seed/${upload.uploaderId}/40/40`} // Use uploaderId for consistent image
                                      alt={upload.uploader || 'Uploader'}
                                      data-ai-hint="user avatar"
                                    />
