@@ -292,8 +292,8 @@ const ProfilePage = () => {
     <div className="container mx-auto p-6">
        <div className="flex justify-between items-center border-b pb-2 mb-6"> {/* Increased margin-bottom */}
           <h1 className="text-2xl font-semibold flex items-center">
-            Viewing {currentValues.fullName || "User"}'s profile
-            {currentValues.isVerified && <CheckCircle2 className="ml-2 h-5 w-5 text-blue-500" />} {/* Blue tick */}
+             {currentValues.fullName || "User"}
+             {currentValues.isVerified && <CheckCircle2 className="ml-2 h-5 w-5 text-blue-500" />} {/* Blue tick */}
           </h1>
           <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
             <DialogTrigger asChild>
