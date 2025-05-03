@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, {useEffect, useState, useMemo, Suspense} from 'react'; // Added Suspense
+import React, {useEffect, useState, useMemo, Suspense, useCallback} from 'react'; // Added Suspense & useCallback
 import {useRouter, useSearchParams, useParams} from 'next/navigation';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
@@ -39,9 +39,9 @@ function ViewNoteContent() {
   const router = useRouter();
 
    // Extract parameters using React.use() within Suspense boundary
-   const noteId = React.use(searchParams?.get('id'));
-   const categoryParam = React.use(searchParams?.get('category'));
-   const fileIndexParam = React.use(searchParams?.get('fileIndex'));
+   const noteId = React.use(searchParams ? searchParams.get('id') : null); // Check if searchParams is null
+   const categoryParam = React.use(searchParams ? searchParams.get('category') : null); // Check if searchParams is null
+   const fileIndexParam = React.use(searchParams ? searchParams.get('fileIndex') : null); // Check if searchParams is null
 
 
   const [note, setNote] = useState<Note | null>(null);
@@ -112,25 +112,32 @@ function ViewNoteContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category, noteId, fileIndexParam]); // Keep router out of dependencies
 
+
+  // Wrap URL update logic in useCallback
+  const updateUrl = useCallback((newIndex: number) => {
+    // Ensure category is a string and encode it properly
+    const encodedCategory = typeof category === 'string' ? encodeURIComponent(category) : '';
+    // Ensure noteId is a string or handle appropriately
+    const currentNoteId = typeof noteId === 'string' ? noteId : '';
+    router.replace(`/view-note?id=${currentNoteId}&category=${encodedCategory}&fileIndex=${newIndex}`, { scroll: false });
+  }, [router, noteId, category]); // Add dependencies
+
   const handlePrevClick = () => {
-    setCurrentFileIndex((prevIndex) => {
-      const newIndex = prevIndex > 0 ? prevIndex - 1 : (note?.files?.length || 1) - 1;
-      updateUrl(newIndex);
-      return newIndex;
-    });
+    // Calculate the new index first
+    const newIndex = currentFileIndex > 0 ? currentFileIndex - 1 : (note?.files?.length || 1) - 1;
+    // Update the state
+    setCurrentFileIndex(newIndex);
+    // Update the URL *after* scheduling state update
+    updateUrl(newIndex);
   };
 
   const handleNextClick = () => {
-    setCurrentFileIndex((prevIndex) => {
-        const newIndex = prevIndex < (note?.files?.length || 1) - 1 ? prevIndex + 1 : 0;
-        updateUrl(newIndex);
-        return newIndex;
-    });
-  };
-
-  const updateUrl = (newIndex: number) => {
-     const encodedCategory = typeof category === 'string' ? encodeURIComponent(category) : '';
-     router.replace(`/view-note?id=${noteId}&category=${encodedCategory}&fileIndex=${newIndex}`, { scroll: false });
+    // Calculate the new index first
+    const newIndex = currentFileIndex < (note?.files?.length || 1) - 1 ? currentFileIndex + 1 : 0;
+    // Update the state
+    setCurrentFileIndex(newIndex);
+    // Update the URL *after* scheduling state update
+    updateUrl(newIndex);
   };
 
 
@@ -169,6 +176,7 @@ function ViewNoteContent() {
   const currentFile = note.files && note.files.length > currentFileIndex ? note.files[currentFileIndex] : null;
   // Handle cases where file might be null before accessing properties
   const baseFileName = currentFile?.name || (note.title ? note.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() : `note_${note.id}`);
+  // Check if currentFile is not null before accessing its type
   const fileExtension = currentFile ? getFileExtension(currentFile.type) : 'bin';
   const fileName = `${baseFileName}.${fileExtension}`;
 
@@ -277,9 +285,10 @@ function ViewNoteContent() {
                     <div className="flex flex-col items-center justify-center p-6 border rounded-md bg-muted min-h-[200px]">
                       <p className="mb-3 text-lg text-muted-foreground">Cannot preview this file type directly.</p>
                       <p className="mb-1 text-sm text-muted-foreground">File: {fileName}</p>
-                      <p className="mb-4 text-xs text-muted-foreground">Type: {currentFile.type || 'Unknown'}</p>
+                      {/* Check if currentFile is not null before accessing its type */}
+                      <p className="mb-4 text-xs text-muted-foreground">Type: {currentFile?.type || 'Unknown'}</p>
                       <a
-                        href={currentFile.url}
+                        href={currentFile?.url || '#'} // Handle potential null URL
                         download={fileName}
                         target="_blank"
                         rel="noopener noreferrer"
