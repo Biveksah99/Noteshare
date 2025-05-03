@@ -1,5 +1,3 @@
-
-
 "use client"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -23,13 +21,15 @@ import { useRouter } from "next/navigation"
 import { useState, useRef, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { Edit, Check, Crop, User as UserIcon } from "lucide-react"
+import { Edit, Check, Crop, User as UserIcon, LogOut } from "lucide-react" // Added LogOut icon
 import { VerifiedBadge } from '@/components/ui/verified-badge'; // Import the new badge
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import ReactCrop, { type Crop as CropType, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { auth } from "@/lib/firebase"; // Import Firebase auth
+import { signOut } from "firebase/auth"; // Import signOut function
 
 // ~60 words * 5 chars/word = 300 characters
 const BIO_MAX_LENGTH = 300;
@@ -324,6 +324,27 @@ const ProfilePage = () => {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+      // Clear local storage (optional, but often good practice on logout)
+      localStorage.removeItem('userProfile');
+      // Redirect to home page or login page
+      router.push('/');
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast({
+        variant: "destructive",
+        title: "Logout Error",
+        description: "Failed to log out. Please try again.",
+      });
+    }
+  };
+
   const currentValues = form.watch(); // Use watch to reactively get values for display
 
   return (
@@ -331,150 +352,155 @@ const ProfilePage = () => {
        <div className="flex justify-between items-center border-b pb-2 mb-6"> {/* Increased margin-bottom */}
           <h1 className="text-2xl font-semibold flex items-center">
              <span>{currentValues.fullName || "User"}</span>
-             {/* Adjusted badge size and margin - Use h-4 w-4 */}
-             {currentValues.isVerified && <VerifiedBadge className="ml-1.5 h-4 w-4 flex-shrink-0" />}
+             {/* Adjusted badge size and margin - Use h-5 w-5 */}
+             {currentValues.isVerified && <VerifiedBadge className="ml-1.5 h-5 w-5 flex-shrink-0" />}
           </h1>
-          <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                 <Edit className="mr-2 h-4 w-4" /> Edit Profile
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[480px]"> {/* Slightly wider dialog */}
-              <DialogHeader>
-                <DialogTitle>Edit Profile</DialogTitle>
-                <DialogDescription>
-                  Make changes to your profile here. Click save when you're done.
-                </DialogDescription>
-              </DialogHeader>
-              <Form {...form}>
-                 {/* Form needs to be inside DialogContent but outside DialogFooter if using default footer */}
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-                  {/* Form Fields */}
-                  <FormField
-                    control={form.control}
-                    name="fullName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Full Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your Full Name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                   <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="your.email@gmail.com" {...field} />
-                        </FormControl>
-                         <FormDescription>
-                           Must be a @gmail.com address.
-                         </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="gender"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Gender</FormLabel>
-                         <Select onValueChange={field.onChange} defaultValue={field.value}>
-                           <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select your gender" />
-                              </SelectTrigger>
-                           </FormControl>
-                           <SelectContent>
-                             <SelectItem value="Male">Male</SelectItem>
-                             <SelectItem value="Female">Female</SelectItem>
-                             <SelectItem value="Other">Other</SelectItem>
-                           </SelectContent>
-                         </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="contactNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your Contact Number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                   <FormField
-                    control={form.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Address</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your Address" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                   {/* "Section" maps to "Classroom" */}
-                  <FormField
-                    control={form.control}
-                    name="section"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Classroom</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your Section/Classroom" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                   {/* Bio field */}
-                   <FormField
-                    control={form.control}
-                    name="bio"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Bio</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Write a short bio about yourself (max 60 words)."
-                            className="resize-none"
-                            {...field}
-                            maxLength={BIO_MAX_LENGTH} // Enforce in textarea as well
-                          />
-                        </FormControl>
-                         <FormDescription>
-                           {`${field.value?.length || 0}/${BIO_MAX_LENGTH} characters`}
-                         </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                   {/* Submit button needs to be inside the DialogFooter */}
-                   <DialogFooter>
-                      <Button type="submit" className={cn("ml-auto bg-accent text-accent-foreground", isLoading && "cursor-not-allowed opacity-50")} disabled={isLoading}>
-                        {isLoading ? "Updating..." : "Update Profile"}
-                      </Button>
-                   </DialogFooter>
-                </form>
-              </Form>
+          <div className="flex items-center space-x-2">
+             <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                   <Edit className="mr-2 h-4 w-4" /> Edit Profile
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[480px]"> {/* Slightly wider dialog */}
+                <DialogHeader>
+                  <DialogTitle>Edit Profile</DialogTitle>
+                  <DialogDescription>
+                    Make changes to your profile here. Click save when you're done.
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                   {/* Form needs to be inside DialogContent but outside DialogFooter if using default footer */}
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                    {/* Form Fields */}
+                    <FormField
+                      control={form.control}
+                      name="fullName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Full Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Your Full Name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="your.email@gmail.com" {...field} />
+                          </FormControl>
+                           <FormDescription>
+                             Must be a @gmail.com address.
+                           </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="gender"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Gender</FormLabel>
+                           <Select onValueChange={field.onChange} defaultValue={field.value}>
+                             <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select your gender" />
+                                </SelectTrigger>
+                             </FormControl>
+                             <SelectContent>
+                               <SelectItem value="Male">Male</SelectItem>
+                               <SelectItem value="Female">Female</SelectItem>
+                               <SelectItem value="Other">Other</SelectItem>
+                             </SelectContent>
+                           </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="contactNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Your Contact Number" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     <FormField
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Address</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Your Address" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     {/* "Section" maps to "Classroom" */}
+                    <FormField
+                      control={form.control}
+                      name="section"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Classroom</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Your Section/Classroom" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     {/* Bio field */}
+                     <FormField
+                      control={form.control}
+                      name="bio"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bio</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Write a short bio about yourself (max 60 words)."
+                              className="resize-none"
+                              {...field}
+                              maxLength={BIO_MAX_LENGTH} // Enforce in textarea as well
+                            />
+                          </FormControl>
+                           <FormDescription>
+                             {`${field.value?.length || 0}/${BIO_MAX_LENGTH} characters`}
+                           </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     {/* Submit button needs to be inside the DialogFooter */}
+                     <DialogFooter>
+                        <Button type="submit" className={cn("ml-auto bg-accent text-accent-foreground", isLoading && "cursor-not-allowed opacity-50")} disabled={isLoading}>
+                          {isLoading ? "Updating..." : "Update Profile"}
+                        </Button>
+                     </DialogFooter>
+                  </form>
+                </Form>
 
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" /> Logout
+            </Button>
+          </div>
        </div>
 
       {/* Center the profile image and details vertically */}
